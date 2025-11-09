@@ -1,13 +1,5 @@
 import type { Config } from "tailwindcss";
 
-/**
- * Tailwind CSS v4 Configuration
- * 
- * In Tailwind v4, most configuration has moved to CSS using @theme.
- * This file is now minimal and mostly for TypeScript typing and plugins.
- * 
- * 
- */
 
 const config: Config = {
   content: [
@@ -17,7 +9,7 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Game color palette - also defined in globals.css for Tailwind v4
+      // Game color palette - also defined in globals.css 
       colors: {
         cream: "#F5E8C7",
         sand: {

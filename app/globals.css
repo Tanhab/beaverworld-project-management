@@ -3,25 +3,43 @@
 /* Shadcn UI color variables */
 @layer base {
   :root {
-    --background: 43 47% 87%;
-    --foreground: 15 29% 28%;
-    --card: 0 0% 100%;
-    --card-foreground: 15 29% 28%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 15 29% 28%;
-    --primary: 14 30% 51%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 26 38% 75%;
-    --secondary-foreground: 15 29% 28%;
-    --muted: 26 24% 63%;
-    --muted-foreground: 15 29% 38%;
-    --accent: 26 38% 75%;
-    --accent-foreground: 15 29% 28%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 26 24% 63%;
-    --input: 26 24% 63%;
-    --ring: 14 30% 51%;
+  
+    --background:              43 70% 87%;   /* #F5E8C7 */
+    --foreground:              12 29% 27%;   /* #5A3A32 */
+
+    --card:                     0  0% 100%;  /* #FFFFFF */
+    --card-foreground:         12 29% 27%;   /* #5A3A32 */
+
+    --primary:                 15 30% 51%;   /* #A86F5C */
+    --primary-foreground:       0  0% 100%;  /* #FFFFFF */
+
+    /* surfaces */
+    --secondary:               27 50% 74%;   /* #DEBA9D  (Surface Accent) */
+    --secondary-foreground:    12 29% 27%;
+
+    /* extra surface (used for “muted”/subtle blocks) */
+    --muted:                   23 37% 64%;   /* #C59B80  (Surface 2) */
+    --muted-foreground:        12 29% 27%;
+
+    /* hover/focus tint for chips and rows (slightly darker than bg) */
+    --accent:                  43 70% 82%;   /* bg shade ↓ ~5% L */
+    --accent-foreground:       12 29% 27%;
+
+    /* borders and dividers (derived from Surface Accent) */
+    --border:                  27 32% 72%;   /* subtle sand stroke */
+    --input:                   27 32% 72%;
+    --ring:                    15 30% 51%;   /* primary ring when needed */
+
+ 
+    --chart-1:                 15 30% 51%;
+    --chart-2:                 27 50% 74%;
+    --chart-3:                 23 37% 64%;
+    --chart-4:                  9 30% 34%;   /* deeper terracotta */
+    --chart-5:                 12 29% 27%;
+
+    --hover-light: 26 55% 90%;   /* soft warm tint on white surfaces */
+    --hover-dark:  26 38% 68%;   /* darker terracotta tint for colored surfaces */
+
     --radius: 0.75rem;
   }
 }
