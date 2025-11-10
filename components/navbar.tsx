@@ -56,7 +56,7 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-[hsl(var(--background))] border-[hsl(var(--border))]">
-      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-[1600px] items-center justify-between px-5 py-3">
         {/* Brand + Nav */}
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-0.5 group">
