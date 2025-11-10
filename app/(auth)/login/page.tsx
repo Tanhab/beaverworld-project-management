@@ -10,9 +10,9 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 interface FormState {
-  username: string;
+  email: string;
   password: string;
-  errors: { username?: string; password?: string };
+  errors: { email?: string; password?: string };
   isLoading: boolean;
 }
 
@@ -20,7 +20,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState<FormState>({
-    username: "",
+    email: "",
     password: "",
     errors: {},
     isLoading: false,
@@ -36,8 +36,12 @@ export default function LoginPage() {
   };
 
   const validateForm = () => {
-    const errors: { username?: string; password?: string } = {};
-    if (!form.username.trim()) errors.username = "Username is required";
+    const errors: { email?: string; password?: string } = {};
+    if (!form.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "Please enter a valid email";
+    }
     if (!form.password) errors.password = "Password is required";
     if (form.password && form.password.length < 6)
       errors.password = "Password must be at least 6 characters";
@@ -57,7 +61,7 @@ export default function LoginPage() {
 
     // Simulate API call
     setTimeout(() => {
-      console.log("Login attempt:", { username: form.username });
+      console.log("Login attempt:", { email: form.email });
       router.push("/issues");
     }, 1500);
   };
@@ -95,8 +99,6 @@ export default function LoginPage() {
                     — Lee Iacocca
                   </footer>
                 </blockquote>
-
-        
               </div>
             </div>
           </div>
@@ -106,19 +108,6 @@ export default function LoginPage() {
             <div className="w-full max-w-sm">
               {/* Header */}
               <div className="space-y-2 mb-8">
-                {/* <div className="flex items-center gap-3 mb-6">
-                  <div className="h-10 w-10 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center">
-                    <Image
-                      src="/beaver_icon.png"
-                      width={24}
-                      height={24}
-                      alt="BeaverWorld"
-                    />
-                  </div>
-                  <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                    BeaverWorldDev
-                  </h1>
-                </div> */}
                 <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">
                   Welcome Back
                 </h2>
@@ -129,30 +118,30 @@ export default function LoginPage() {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Username Input */}
+                {/* Email Input */}
                 <div className="space-y-2.5">
                   <Label
-                    htmlFor="username"
+                    htmlFor="email"
                     className="text-sm font-semibold text-[hsl(var(--foreground))]"
                   >
-                    Username
+                    Email
                   </Label>
                   <div className="relative group">
                     <Input
-                      id="username"
-                      name="username"
-                      type="text"
-                      placeholder="Enter your username"
-                      value={form.username}
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={form.email}
                       onChange={handleInputChange}
-                      autoComplete="username"
+                      autoComplete="email"
                       className={cn(
                         "w-full px-4 py-3 rounded-lg",
                         "bg-[hsl(var(--background))] border-2",
                         "transition-all duration-200 ease-out",
                         "placeholder:text-[hsl(var(--muted-foreground))]",
                         "focus:outline-none focus:ring-0",
-                        form.errors.username
+                        form.errors.email
                           ? "border-red-500 focus:border-red-600"
                           : "border-[hsl(var(--border))] focus:border-[hsl(var(--primary))] focus:bg-white"
                       )}
@@ -165,13 +154,13 @@ export default function LoginPage() {
                         "group-focus-within:w-full"
                       )}
                       style={{
-                        width: form.username.length > 0 ? "100%" : "0%",
+                        width: form.email.length > 0 ? "100%" : "0%",
                       }}
                     />
                   </div>
-                  {form.errors.username && (
+                  {form.errors.email && (
                     <p className="text-xs text-red-500 font-medium">
-                      {form.errors.username}
+                      {form.errors.email}
                     </p>
                   )}
                 </div>
