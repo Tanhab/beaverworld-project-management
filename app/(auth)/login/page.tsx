@@ -8,62 +8,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-
-interface FormState {
-  email: string;
-  password: string;
-  errors: { email?: string; password?: string };
-  isLoading: boolean;
-}
+import { useForm } from "react-hook-form";
+import { LoginInput, loginSchema } from "@/lib/validations/auth";
+import { zodResolver } from '@hookform/resolvers/zod'
+import { loginAction } from "./actions";
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState<FormState>({
-    email: "",
-    password: "",
-    errors: {},
-    isLoading: false,
+
+  // react-hook-form handles ALL form state
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors, isSubmitting },
+    watch // To track input values for animation
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-      errors: { ...prev.errors, [name]: "" },
-    }));
-  };
+  // Watch values for the gradient animation
+  const emailValue = watch("email", "");
+  const passwordValue = watch("password", "");
 
-  const validateForm = () => {
-    const errors: { email?: string; password?: string } = {};
-    if (!form.email.trim()) {
-      errors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      errors.email = "Please enter a valid email";
+  const onSubmit = async (data: LoginInput) => {
+    const formData = new FormData();
+    formData.append("email", data.email);
+    formData.append("password", data.password);
+
+    const result = await loginAction(formData);
+
+    if (result?.error) {
+      console.error(result.error);
+      // TODO: create toast
     }
-    if (!form.password) errors.password = "Password is required";
-    if (form.password && form.password.length < 6)
-      errors.password = "Password must be at least 6 characters";
-    return errors;
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const errors = validateForm();
-
-    if (Object.keys(errors).length > 0) {
-      setForm((prev) => ({ ...prev, errors }));
-      return;
-    }
-
-    setForm((prev) => ({ ...prev, isLoading: true }));
-
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Login attempt:", { email: form.email });
-      router.push("/issues");
-    }, 1500);
   };
 
   return (
@@ -117,7 +95,7 @@ export default function LoginPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 {/* Email Input */}
                 <div className="space-y-2.5">
                   <Label
@@ -129,11 +107,9 @@ export default function LoginPage() {
                   <div className="relative group">
                     <Input
                       id="email"
-                      name="email"
                       type="email"
                       placeholder="Enter your email"
-                      value={form.email}
-                      onChange={handleInputChange}
+                      {...register("email")}
                       autoComplete="email"
                       className={cn(
                         "w-full px-4 py-3 rounded-lg",
@@ -141,26 +117,26 @@ export default function LoginPage() {
                         "transition-all duration-200 ease-out",
                         "placeholder:text-[hsl(var(--muted-foreground))]",
                         "focus:outline-none focus:ring-0",
-                        form.errors.email
+                        errors.email
                           ? "border-red-500 focus:border-red-600"
                           : "border-[hsl(var(--border))] focus:border-[hsl(var(--primary))] focus:bg-white"
                       )}
-                      disabled={form.isLoading}
+                      disabled={isSubmitting}
                     />
                     <div
                       className={cn(
-                        "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--secondary))]",
+                        "absolute bottom-0 left-0 h-0.5 bg-linear-to-r from-[hsl(var(--primary))] to-[hsl(var(--secondary))]",
                         "transition-all duration-300 ease-out rounded-full",
                         "group-focus-within:w-full"
                       )}
                       style={{
-                        width: form.email.length > 0 ? "100%" : "0%",
+                        width: emailValue.length > 0 ? "100%" : "0%",
                       }}
                     />
                   </div>
-                  {form.errors.email && (
+                  {errors.email && (
                     <p className="text-xs text-red-500 font-medium">
-                      {form.errors.email}
+                      {errors.email.message}
                     </p>
                   )}
                 </div>
@@ -176,29 +152,27 @@ export default function LoginPage() {
                   <div className="relative group">
                     <Input
                       id="password"
-                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      value={form.password}
-                      onChange={handleInputChange}
-                      autoComplete="current-password"
+                      {...register("password")}
+                      
                       className={cn(
                         "w-full px-4 py-3 pr-12 rounded-lg",
                         "bg-[hsl(var(--background))] border-2",
                         "transition-all duration-200 ease-out",
                         "placeholder:text-[hsl(var(--muted-foreground))]",
                         "focus:outline-none focus:ring-0",
-                        form.errors.password
+                        errors.password
                           ? "border-red-500 focus:border-red-600"
                           : "border-[hsl(var(--border))] focus:border-[hsl(var(--primary))] focus:bg-white"
                       )}
-                      disabled={form.isLoading}
+                      disabled={isSubmitting}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] transition-colors"
-                      disabled={form.isLoading}
+                      disabled={isSubmitting}
                       aria-label={
                         showPassword ? "Hide password" : "Show password"
                       }
@@ -211,18 +185,18 @@ export default function LoginPage() {
                     </button>
                     <div
                       className={cn(
-                        "absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--secondary))]",
+                        "absolute bottom-0 left-0 h-0.5 bg-linear-to-r from-[hsl(var(--primary))] to-[hsl(var(--secondary))]",
                         "transition-all duration-300 ease-out rounded-full",
                         "group-focus-within:w-full"
                       )}
                       style={{
-                        width: form.password.length > 0 ? "100%" : "0%",
+                        width: passwordValue.length > 0 ? "100%" : "0%",
                       }}
                     />
                   </div>
-                  {form.errors.password && (
+                  {errors.password && (
                     <p className="text-xs text-red-500 font-medium">
-                      {form.errors.password}
+                      {errors.password.message}
                     </p>
                   )}
                 </div>
@@ -240,7 +214,7 @@ export default function LoginPage() {
                 {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={form.isLoading}
+                  disabled={isSubmitting}
                   className={cn(
                     "w-full mt-6 py-3 rounded-lg font-semibold text-base",
                     "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]",
@@ -250,7 +224,7 @@ export default function LoginPage() {
                     "flex items-center justify-center gap-2"
                   )}
                 >
-                  {form.isLoading ? (
+                  {isSubmitting ? (
                     <>
                       <div className="h-4 w-4 border-2 border-[hsl(var(--primary-foreground))] border-t-transparent rounded-full animate-spin" />
                       Signing in...
