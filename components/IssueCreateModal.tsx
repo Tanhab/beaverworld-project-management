@@ -13,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -23,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { createIssueSchema, type CreateIssueInput } from "@/lib/validations/issue";
 import { useCreateIssue } from "@/lib/hooks/useIssues";
 import { useUsers } from "@/lib/hooks/useUser";
-import { toast } from "sonner";
+import TiptapEditor from "./TiptapEditor";
 
 interface CreateIssueModalProps {
   open: boolean;
@@ -107,7 +106,7 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="sm:max-w-[700px] h-[min(90vh,calc(100dvh-2rem))] bg-[hsl(var(--card))] border-[hsl(var(--border))] p-0 flex flex-col overflow-hidden"
+        className="sm:max-w-[900px] h-[min(90vh,calc(100dvh-2rem))] bg-[hsl(var(--card))] border-[hsl(var(--border))] p-0 flex flex-col overflow-hidden"
       >
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-[hsl(var(--border))]">
           <DialogTitle className="text-2xl font-bold">Create New Issue</DialogTitle>
@@ -140,20 +139,12 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
                 <Label htmlFor="description" className="font-semibold text-base">
                   Description <span className="text-red-500">*</span>
                 </Label>
-                <div className="border-2 border-[hsl(var(--border))] rounded-lg p-3 min-h-[150px] bg-[hsl(var(--background))]">
-                  <Textarea
-                    id="description"
-                    placeholder="Detailed description of the issue..."
-                    className="border-0 focus-visible:ring-0 resize-none min-h-[120px]"
-                    {...register("description")}
-                  />
-                </div>
-                {errors.description && (
-                  <p className="text-sm text-red-600">{errors.description.message}</p>
-                )}
-                <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                  Rich text editor (Tiptap) will be integrated later
-                </p>
+                <TiptapEditor
+                  content={watch("description")}
+                  onChange={(value) => setValue("description", value)}
+                  placeholder="Detailed description of the issue..."
+                  error={errors.description?.message}
+                />
               </div>
 
               {/* Priority */}
