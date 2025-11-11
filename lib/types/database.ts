@@ -17,6 +17,7 @@ export type Updates<T extends keyof Database['public']['Tables']> =
     Database['public']['Tables'][T]['Update']
 
 // Type aliases for easier use
+
 export type Profile = Tables<'profiles'>
 export type Issue = Tables<'issues'>
 export type IssueAssignee = Tables<'issue_assignees'>
