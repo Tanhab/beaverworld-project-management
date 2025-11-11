@@ -87,3 +87,22 @@ export const getPriorityColor = (priority: string) => {
       return issuesCopy;
   }
 }
+
+export const formatDeadline = (date: Date) => {
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMs < 0) {
+      // Past deadline
+      return `${Math.abs(diffDays)}d overdue`;
+    } else if (diffDays === 0) {
+      return "Today";
+    } else if (diffDays === 1) {
+      return "Tomorrow";
+    } else if (diffDays < 7) {
+      return `${diffDays}d`;
+    } else {
+      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" , year : "numeric"});
+    }
+  };

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
     formatDate,
+    formatDeadline,
     getCategoryColor,
     getPriorityColor,
     getStatusConfig,
@@ -87,10 +88,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
                     </div>
                 </div>
 
-                {/* ===== Line 2 ===== */}
-                <p className="mt-2 line-clamp-2 text-sm text-[hsl(var(--muted-foreground))]">
-                    {issue.description}
-                </p>
+                {/* ===== Line 2 - Description removed ===== */}
 
                 {/* ===== Line 3 ===== */}
                 <div
@@ -129,7 +127,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
 
                         {/* Comments & Attachments */}
                         <div className="flex items-center gap-3 text-sm text-[hsl(var(--muted-foreground))]">
-                            {commentCount > 0 && (
+                            {commentCount >= 0 && (
                                 <div className="flex items-center gap-1">
                                     <MessageSquare className="h-4 w-4" />
                                     <span className="font-medium">
@@ -137,7 +135,7 @@ export default function IssueCard({ issue }: IssueCardProps) {
                                     </span>
                                 </div>
                             )}
-                            {imageCount > 0 && (
+                            {imageCount >= 0 && (
                                 <div className="flex items-center gap-1">
                                     <Paperclip className="h-4 w-4" />
                                     <span className="font-medium">
@@ -147,18 +145,18 @@ export default function IssueCard({ issue }: IssueCardProps) {
                             )}
                         </div>
 
-                        {/* Deadline */}
+                        {/* Deadline with better formatting */}
                         {issue.deadline && !isClosed && (
                             <div
                                 className={cn(
-                                    'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold',
+                                    'flex items-center gap-1 rounded-md px-2 py-1 text-sm font-semibold',
                                     new Date(issue.deadline) < new Date()
                                         ? 'bg-red-50 text-red-600'
                                         : 'bg-blue-50 text-blue-600',
                                 )}
                             >
                                 <Clock className="h-3 w-3" />
-                                Due {formatDate(new Date(issue.deadline))}
+                                {formatDeadline(new Date(issue.deadline))}
                             </div>
                         )}
                     </div>
