@@ -10,6 +10,7 @@
  */
 
 import { createBrowserClient } from '@supabase/ssr';
+import { Database } from '../types/database.types';
 
 export function createClient() {
   // Check if environment variables are set
@@ -21,7 +22,7 @@ export function createClient() {
     throw new Error('Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
   }
 
-  return createBrowserClient(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
