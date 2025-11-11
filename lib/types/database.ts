@@ -1,3 +1,4 @@
+// lib/types/database.ts
 import { Database } from './database.types'
 
 // Export the generated Database type
@@ -33,7 +34,6 @@ export type IssuePriority = Enums<'issue_priority'>
 export type ActivityType = Enums<'activity_type'>
 export type NotificationType = Enums<'notification_type'>
 export type NotificationPriority = Enums<'notification_priority'>
-//export type ScenarioStatus = Enums<'scenario_status'>
 
 // Insert types (for creating new records)
 export type CreateIssueInput = Inserts<'issues'>
@@ -50,11 +50,21 @@ export interface CreateUserInput {
     email: string
     roles: string[]
     discord_id?: string
+    initials?: string 
 }
 
 export interface IssueWithRelations extends Issue {
     assignees?: Profile[]
     created_by_profile?: Profile
+    closed_by_profile?: Profile
     images?: IssueImage[]
     activities?: IssueActivity[]
+}
+
+// Helper type for assignee display in UI
+export interface AssigneeDisplay {
+    id: string
+    username: string
+    initials: string
+    avatar_url: string | null
 }

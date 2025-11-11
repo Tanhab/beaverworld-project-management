@@ -76,25 +76,25 @@ export async function getAllIssues(filters?: {
   // Fetch related data separately
   const issuesWithRelations = await Promise.all(
     issues.map(async (issue) => {
-      // Fetch creator profile
+      // Fetch creator profile with initials
       const { data: createdByProfile } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url')
+        .select('id, username, avatar_url, initials')
         .eq('id', issue.created_by)
         .single();
 
-      // Fetch assignees
+      // Fetch assignees with initials
       const { data: assigneeData } = await supabase
         .from('issue_assignees')
         .select('user_id')
         .eq('issue_id', issue.id);
 
-      let assignees: Array<{ id: string; username: string; avatar_url: string | null }> = [];
+      let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
       if (assigneeData && assigneeData.length > 0) {
         const userIds = assigneeData.map(a => a.user_id);
         const { data: users } = await supabase
           .from('profiles')
-          .select('id, username, avatar_url')
+          .select('id, username, avatar_url, initials')
           .in('id', userIds);
         assignees = users || [];
       }
@@ -135,10 +135,10 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
   if (error) throw error;
   if (!issue) return null;
 
-  // Fetch creator profile
+  // Fetch creator profile with initials
   const { data: createdByProfile } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url')
+    .select('id, username, avatar_url, initials')
     .eq('id', issue.created_by)
     .single();
 
@@ -147,24 +147,24 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
   if (issue.closed_by) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url')
+      .select('id, username, avatar_url, initials')
       .eq('id', issue.closed_by)
       .single();
     closedByProfile = data || undefined;
   }
 
-  // Fetch assignees
+  // Fetch assignees with initials
   const { data: assigneeData } = await supabase
     .from('issue_assignees')
     .select('user_id, assigned_at, assigned_by')
     .eq('issue_id', issue.id);
 
-  let assignees: Array<{ id: string; username: string; avatar_url: string | null }> = [];
+  let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
   if (assigneeData && assigneeData.length > 0) {
     const userIds = assigneeData.map(a => a.user_id);
     const { data: users } = await supabase
       .from('profiles')
-      .select('id, username, avatar_url')
+      .select('id, username, avatar_url, initials')
       .in('id', userIds);
     assignees = users || [];
   }
@@ -484,7 +484,7 @@ export async function getMyIssues(): Promise<IssueWithRelations[]> {
     issues.map(async (issue) => {
       const { data: createdByProfile } = await supabase
         .from('profiles')
-        .select('id, username, avatar_url')
+        .select('id, username, avatar_url, initials')
         .eq('id', issue.created_by)
         .single();
 
@@ -493,12 +493,12 @@ export async function getMyIssues(): Promise<IssueWithRelations[]> {
         .select('user_id')
         .eq('issue_id', issue.id);
 
-      let assignees: Array<{ id: string; username: string; avatar_url: string | null }> = [];
+      let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
       if (assigneeData && assigneeData.length > 0) {
         const userIds = assigneeData.map(a => a.user_id);
         const { data: users } = await supabase
           .from('profiles')
-          .select('id, username, avatar_url')
+          .select('id, username, avatar_url, initials')
           .in('id', userIds);
         assignees = users || [];
       }

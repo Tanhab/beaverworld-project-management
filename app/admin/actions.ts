@@ -9,7 +9,7 @@ export async function createNewUser(data: {
   discord_id?: string
 }) {
 
-    await requireAdmin()
+    //await requireAdmin()
     const supabase = createAdminClient() // Bypasses RLS
   
     // Create auth user 

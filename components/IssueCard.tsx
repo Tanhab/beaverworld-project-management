@@ -11,30 +11,23 @@ import {
     getPriorityColor,
     getStatusConfig,
 } from '@/lib/issues/utils'
+import { IssueWithRelations } from '@/lib/types/database'
 
-// --- TypeScript props (define what you pass from dummyIssues)
-export interface Issue {
-    id: string
-    issueNumber: string | number
-    title: string
-    description: string
-    priority: string
-    status: string
-    category: string
-    assignedTo: { id: string; name: string; initials: string }[]
-    commentCount: number
-    imageCount: number
-    deadline?: Date
-    updatedAt: Date
+interface IssueCardProps {
+    issue: IssueWithRelations
 }
 
-export default function IssueCard({ issue }: { issue: Issue }) {
+export default function IssueCard({ issue }: IssueCardProps) {
     const statusConfig = getStatusConfig(issue.status)
     const StatusIcon = statusConfig.icon
     const isClosed = issue.status === 'closed'
 
+    // Count comments from activities
+    const commentCount = issue.activities?.filter(a => a.activity_type === 'comment').length || 0
+    const imageCount = issue.images?.length || 0
+
     return (
-        <Link href={`/issues/${issue.issueNumber}`}>
+        <Link href={`/issues/${issue.issue_number}`}>
             <div
                 className={cn(
                     'group cursor-pointer rounded-xl border p-5 transition-all',
@@ -50,7 +43,7 @@ export default function IssueCard({ issue }: { issue: Issue }) {
                 >
                     <div className="flex min-w-0 items-baseline gap-2">
                         <span className="shrink-0 font-mono text-sm leading-none font-bold text-[hsl(var(--primary))]">
-                            IS-{issue.issueNumber}
+                            IS-{issue.issue_number}
                         </span>
                         <span className="shrink-0 text-[hsl(var(--muted-foreground))]">
                             —
@@ -107,45 +100,48 @@ export default function IssueCard({ issue }: { issue: Issue }) {
                     )}
                 >
                     <div className="flex items-center gap-4">
-                        {/* Assignees */}
-                        <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                            <div className="flex -space-x-2">
-                                {issue.assignedTo.slice(0, 3).map((user) => (
-                                    <Avatar
-                                        key={user.id}
-                                        className="h-7 w-7 border-2 border-[hsl(var(--card))]"
-                                    >
-                                        <AvatarFallback className="bg-[hsl(var(--primary))] text-xs font-bold text-[hsl(var(--primary-foreground))]">
-                                            {user.initials}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                ))}
-                                {issue.assignedTo.length > 3 && (
-                                    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[hsl(var(--card))] bg-[hsl(var(--muted))]">
-                                        <span className="text-xs font-bold text-[hsl(var(--muted-foreground))]">
-                                            +{issue.assignedTo.length - 3}
-                                        </span>
-                                    </div>
-                                )}
+                        {/* Assignees with initials */}
+                        {issue.assignees && issue.assignees.length > 0 && (
+                            <div className="flex items-center gap-2">
+                                <User className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                                <div className="flex -space-x-2">
+                                    {issue.assignees.slice(0, 3).map((user) => (
+                                        <Avatar
+                                            key={user.id}
+                                            className="h-7 w-7 border-2 border-[hsl(var(--card))]"
+                                            title={user.username}
+                                        >
+                                            <AvatarFallback className="bg-[hsl(var(--primary))] text-xs font-bold text-[hsl(var(--primary-foreground))]">
+                                                {user.initials || user.username.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    ))}
+                                    {issue.assignees.length > 3 && (
+                                        <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-[hsl(var(--card))] bg-[hsl(var(--muted))]">
+                                            <span className="text-xs font-bold text-[hsl(var(--muted-foreground))]">
+                                                +{issue.assignees.length - 3}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Comments & Attachments */}
                         <div className="flex items-center gap-3 text-sm text-[hsl(var(--muted-foreground))]">
-                            {issue.commentCount > 0 && (
+                            {commentCount > 0 && (
                                 <div className="flex items-center gap-1">
                                     <MessageSquare className="h-4 w-4" />
                                     <span className="font-medium">
-                                        {issue.commentCount}
+                                        {commentCount}
                                     </span>
                                 </div>
                             )}
-                            {issue.imageCount > 0 && (
+                            {imageCount > 0 && (
                                 <div className="flex items-center gap-1">
                                     <Paperclip className="h-4 w-4" />
                                     <span className="font-medium">
-                                        {issue.imageCount}
+                                        {imageCount}
                                     </span>
                                 </div>
                             )}
@@ -156,19 +152,19 @@ export default function IssueCard({ issue }: { issue: Issue }) {
                             <div
                                 className={cn(
                                     'flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold',
-                                    issue.deadline < new Date()
+                                    new Date(issue.deadline) < new Date()
                                         ? 'bg-red-50 text-red-600'
                                         : 'bg-blue-50 text-blue-600',
                                 )}
                             >
                                 <Clock className="h-3 w-3" />
-                                Due {formatDate(issue.deadline)}
+                                Due {formatDate(new Date(issue.deadline))}
                             </div>
                         )}
                     </div>
 
                     <div className="text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                        Updated {formatDate(issue.updatedAt)}
+                        Updated {formatDate(new Date(issue.updated_at))}
                     </div>
                 </div>
             </div>

@@ -40,6 +40,8 @@ export function useIssues(filters?: IssueFilters) {
     queryKey: ['issues', filters],
     queryFn: () => getAllIssues(filters),
     staleTime: 30 * 1000, // 30 seconds
+    retry: 2,
+    retryDelay : (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 }
 

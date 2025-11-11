@@ -310,6 +310,7 @@ export type Database = {
           discord_id: string | null
           email: string | null
           id: string
+          initials: string
           roles: string[]
           updated_at: string | null
           username: string
@@ -320,6 +321,7 @@ export type Database = {
           discord_id?: string | null
           email?: string | null
           id: string
+          initials?: string
           roles?: string[]
           updated_at?: string | null
           username: string
@@ -330,6 +332,7 @@ export type Database = {
           discord_id?: string | null
           email?: string | null
           id?: string
+          initials?: string
           roles?: string[]
           updated_at?: string | null
           username?: string

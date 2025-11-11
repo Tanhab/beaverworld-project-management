@@ -24,4 +24,5 @@ export async function POST(request: NextRequest) {
 //   "email": "john@example.com",
 //   "roles": ["Dev"],
 //   "discord_id": "123456789"
+//    "initials" : "TS"
 // }
