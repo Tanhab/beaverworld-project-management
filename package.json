@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:types": "npx supabase gen types typescript --linked > lib/types/database.types.ts"
+    "db:types": "pnpm supabase gen types typescript --linked > lib/types/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

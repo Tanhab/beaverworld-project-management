@@ -8,7 +8,7 @@ import {
   Italic,
   List,
   ListOrdered,
-  Heading2,
+  Heading3,
   Quote,
   Code,
   Undo,
@@ -112,7 +112,7 @@ export default function TiptapEditor({
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             isActive={editor.isActive("heading", { level: 2 })}
           >
-            <Heading2 className="h-4 w-4" />
+            <Heading3 className="h-4 w-4" />
           </ToolbarButton>
 
           <div className="w-px h-6 bg-[hsl(var(--border))] mx-1" />
