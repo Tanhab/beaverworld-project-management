@@ -53,12 +53,21 @@ export interface CreateUserInput {
     initials?: string 
 }
 
+export interface IssueActivityWithUser extends IssueActivity {
+  user_profile?: {
+    id: string;
+    username: string;
+    initials: string;
+    avatar_url: string | null;
+  };
+}
+
 export interface IssueWithRelations extends Issue {
-    assignees?: Profile[]
-    created_by_profile?: Profile
-    closed_by_profile?: Profile
-    images?: IssueImage[]
-    activities?: IssueActivity[]
+  assignees?: Profile[]
+  created_by_profile?: Profile
+  closed_by_profile?: Profile
+  images?: IssueImage[]
+  activities?: IssueActivityWithUser[] // Update this line
 }
 
 // Helper type for assignee display in UI

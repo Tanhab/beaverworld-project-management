@@ -14,7 +14,6 @@ import {
   Calendar,
   Package,
   Grid2X2Check,
-  Bug,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -39,7 +38,7 @@ export default function ActivityUpdateCard({
     switch (activityType) {
       case "created":
         return {
-          icon: <Bug className="h-4 w-4 text-orange-600" />,
+          icon: <AlertCircle className="h-4 w-4 text-orange-600" />,
           message: "created this issue",
         };
 
@@ -49,6 +48,22 @@ export default function ActivityUpdateCard({
           pending_approval: <Clock className="h-4 w-4 text-blue-600" />,
           closed: <CheckCircle2 className="h-4 w-4 text-green-600" />,
         };
+        
+        // Special message for pending approval
+        if (content.new_status === "pending_approval") {
+          return {
+            icon: statusIcons[content.new_status as keyof typeof statusIcons] || <Edit2 className="h-4 w-4" />,
+            message: (
+              <>
+                marked as pending approval
+                <span className="block text-xs text-[hsl(var(--muted-foreground))] mt-1">
+                  This will be discussed in the next meeting
+                </span>
+              </>
+            ),
+          };
+        }
+        
         return {
           icon: statusIcons[content.new_status as keyof typeof statusIcons] || <Edit2 className="h-4 w-4" />,
           message: (

@@ -8,7 +8,7 @@ import {
   Italic,
   List,
   ListOrdered,
-  Heading3,
+  Heading2,
   Quote,
   Code,
   Undo,
@@ -21,6 +21,7 @@ interface TiptapEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   error?: string;
+  minHeight?: string; // Allow customizable min-height
 }
 
 export default function TiptapEditor({
@@ -28,6 +29,7 @@ export default function TiptapEditor({
   onChange,
   placeholder = "Write your description here...",
   error,
+  minHeight = "min-h-[200px]", // Default to larger for create/edit forms
 }: TiptapEditorProps) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -44,7 +46,7 @@ export default function TiptapEditor({
     content,
     editorProps: {
       attributes: {
-        class: "prose prose-sm max-w-none focus:outline-none min-h-[200px] px-4 py-3 text-[hsl(var(--foreground))] prose-ul:list-disc prose-ol:list-decimal prose-li:ml-4",
+        class: `prose prose-sm max-w-none focus:outline-none ${minHeight} px-4 py-3 text-[hsl(var(--foreground))] prose-ul:list-disc prose-ol:list-decimal prose-li:ml-4`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -112,7 +114,7 @@ export default function TiptapEditor({
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             isActive={editor.isActive("heading", { level: 2 })}
           >
-            <Heading3 className="h-4 w-4" />
+            <Heading2 className="h-4 w-4" />
           </ToolbarButton>
 
           <div className="w-px h-6 bg-[hsl(var(--border))] mx-1" />

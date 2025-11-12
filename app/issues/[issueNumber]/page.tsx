@@ -39,9 +39,11 @@ import {
   getStatusConfig,
 } from "@/lib/issues/utils";
 import Link from "next/link";
-import ActivityUpdateCard from "@/components/ActivityUpdateCard";
-import ActivityCommentCard from "@/components/ActivityCommentCard";
-
+import ActivityUpdateCard from "@/components/issue/ActivityUpdateCard";
+import ActivityCommentCard from "@/components/issue/ActivityCommentCard";
+import CommentInput from "@/components/issue/CommentInput";
+import CloseIssueDialog from "@/components/issue/CloseIssueDialog";
+import RequestApprovalDialog from "@/components/issue/RequestApprovalDialog";
 export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -51,6 +53,16 @@ export default function IssueDetailPage() {
   const { data: currentUser } = useCurrentUser();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+
+  const handleRequestApproval = () => {
+    setApprovalDialogOpen(true);
+  };
+
+  const handleCloseIssue = () => {
+    setCloseDialogOpen(true);
+  };
 
   if (isLoading) {
     return (
@@ -228,45 +240,6 @@ export default function IssueDetailPage() {
               />
             </div>
 
-            {/* Action Buttons */}
-            {!isClosed ? (
-              <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-4">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <Button className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Add Comment
-                  </Button>
-                  <Button variant="outline" className="border-blue-200 text-blue-600">
-                    <Clock className="h-4 w-4 mr-2" />
-                    Request Approval
-                  </Button>
-                  <Button variant="outline" className="border-green-200 text-green-600">
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Close Issue
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-6 w-6 text-green-600" />
-                    <div>
-                      <p className="font-bold text-green-600">This issue is closed</p>
-                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                        Closed by {issue.closed_by_profile?.username} on{" "}
-                        {issue.closed_at && formatDate(new Date(issue.closed_at))}
-                      </p>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="border-orange-200 text-orange-600">
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Reopen Issue
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {/* Activity Thread */}
             <div className="space-y-4">
               <h3 className="text-xl font-bold">Activity</h3>
@@ -287,19 +260,28 @@ export default function IssueDetailPage() {
                   />
 
                   {/* Render activities */}
-                  {issue.activities && issue.activities.length > 0 ? (
-                    issue.activities.map((activity) => {
+                  {issue.activities && issue.activities.length > 0 && (
+                    // Sort activities oldest first (chronological order)
+                    [...issue.activities]
+                      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                      .map((activity: any) => {
+                      // Get user info - assuming backend includes user_profile in activity
+                      const activityUser = activity.user_profile || {
+                        username: "Unknown User",
+                        initials: "??"
+                      };
+                      
                       // Use comment card for comments and closures
                       if (activity.activity_type === "comment" || activity.activity_type === "closed") {
                         return (
                           <ActivityCommentCard
                             key={activity.id}
                             activityType={activity.activity_type as "comment" | "closed"}
-                            userName="User Name" // TODO: Get from activity.user_id
-                            userInitials="UN"
+                            userName={activityUser.username}
+                            userInitials={activityUser.initials}
                             timestamp={new Date(activity.created_at)}
                             content={activity.content}
-                            isAuthor={false} // TODO: Check if user is issue creator
+                            isAuthor={activity.user_id === issue.created_by}
                           />
                         );
                       }
@@ -309,24 +291,53 @@ export default function IssueDetailPage() {
                         <ActivityUpdateCard
                           key={activity.id}
                           activityType={activity.activity_type}
-                          userName="User Name" // TODO: Get from activity.user_id
-                          userInitials="UN"
+                          userName={activityUser.username}
+                          userInitials={activityUser.initials}
                           timestamp={new Date(activity.created_at)}
                           content={activity.content}
                         />
                       );
                     })
-                  ) : (
-                    <div className="mt-4 bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-8 text-center">
-                      <MessageSquare className="h-12 w-12 text-[hsl(var(--muted-foreground))] mx-auto mb-3" />
-                      <p className="text-[hsl(var(--muted-foreground))]">
-                        No additional activity yet. Be the first to comment!
-                      </p>
-                    </div>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Comment Input - Always at bottom of thread */}
+            <CommentInput
+              issueId={issue.id}
+              issueStatus={issue.status}
+              onRequestApproval={handleRequestApproval}
+              onCloseIssue={handleCloseIssue}
+            />
+
+            {/* Closed Issue Banner */}
+            {isClosed && (
+              <div className="bg-[hsl(var(--card))] border-2 border-green-200 rounded-xl p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle2 className="h-7 w-7 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg text-green-600">This issue is closed</p>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))] mt-0.5">
+                        Closed by{" "}
+                        <span className="font-semibold">{issue.closed_by_profile?.username}</span>{" "}
+                        on {issue.closed_at && formatDate(new Date(issue.closed_at))}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reopen Issue
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Sidebar (1/3 width) */}
@@ -481,6 +492,22 @@ export default function IssueDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Close Issue Dialog */}
+      <CloseIssueDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+      />
+
+      {/* Request Approval Dialog */}
+      <RequestApprovalDialog
+        open={approvalDialogOpen}
+        onOpenChange={setApprovalDialogOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+      />
     </div>
   );
 }

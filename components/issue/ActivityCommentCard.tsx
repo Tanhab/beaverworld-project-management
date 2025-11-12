@@ -24,13 +24,13 @@ export default function ActivityCommentCard({
   isAuthor = false,
 }: ActivityCommentCardProps) {
   return (
-    <div className="relative bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
-      <div className="flex gap-4">
+    <div className="relative bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-4 mt-4">
+      <div className="flex gap-3">
         {/* Avatar */}
-        <Avatar className="h-10 w-10 border-2 border-[hsl(var(--card))] relative z-10 bg-[hsl(var(--background))]">
+        <Avatar className="h-10 w-10 border-2 border-[hsl(var(--card))] relative z-10 bg-[hsl(var(--background))] shrink-0">
           <AvatarFallback
             className={cn(
-              "font-bold",
+              "font-bold text-xs",
               activityType === "closed"
                 ? "bg-green-600 text-white"
                 : "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
@@ -42,8 +42,8 @@ export default function ActivityCommentCard({
 
         <div className="flex-1 min-w-0">
           {/* Header */}
-          <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="font-bold">{userName}</span>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <span className="font-bold text-base">{userName}</span>
             {isAuthor && (
               <Badge
                 variant="outline"
@@ -63,7 +63,7 @@ export default function ActivityCommentCard({
 
           {/* Comment Content */}
           {content.text && (
-            <div className="bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded-lg p-4">
+            <div className="bg-[hsl(var(--background))] border border-[hsl(var(--border))] rounded-lg p-3">
               <div
                 className="prose prose-sm max-w-none text-[hsl(var(--foreground))]"
                 dangerouslySetInnerHTML={{ __html: content.text }}

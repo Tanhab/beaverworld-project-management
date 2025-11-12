@@ -9,6 +9,7 @@ import type {
   Database,
   Profile,
 } from '@/lib/types/database';
+import { Json } from '../types/database.types';
 
 /**
  * Get all issues with optional filtering
@@ -156,7 +157,7 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
   // Fetch assignees with initials
   const { data: assigneeData } = await supabase
     .from('issue_assignees')
-    .select('user_id, assigned_at, assigned_by')
+    .select('user_id')
     .eq('issue_id', issue.id);
 
   let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
@@ -176,6 +177,7 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
     .eq('issue_id', issue.id)
     .order('display_order');
 
+  // ========== ACTIVITIES WITH USER PROFILES ==========
   // Fetch activities
   const { data: activities } = await supabase
     .from('issue_activities')
@@ -183,13 +185,38 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
     .eq('issue_id', issue.id)
     .order('created_at', { ascending: false });
   
+  // Fetch user profiles for all activities
+  let activitiesWithProfiles: { user_profile: { id: string; username: string; initials: string; avatar_url: string | null; } | null; activity_type: Database["public"]["Enums"]["activity_type"]; content: Json; created_at: string; id: string; issue_id: string; user_id: string; }[] = [];
+  if (activities && activities.length > 0) {
+    // Get unique user IDs from activities
+    const activityUserIds = [...new Set(activities.map(a => a.user_id))];
+    
+    // Fetch all user profiles at once
+    const { data: activityUserProfiles } = await supabase
+      .from('profiles')
+      .select('id, username, initials, avatar_url')
+      .in('id', activityUserIds);
+    
+    // Create a map for quick lookup
+    const profileMap = new Map(
+      activityUserProfiles?.map(p => [p.id, p]) || []
+    );
+    
+    // Map profiles to activities
+    activitiesWithProfiles = activities.map(activity => ({
+      ...activity,
+      user_profile: profileMap.get(activity.user_id) || null
+    }));
+  }
+  // ================================================
+  
   return {
     ...issue,
     created_by_profile: createdByProfile || undefined,
     closed_by_profile: closedByProfile,
     assignees: assignees || [],
     images: images || [],
-    activities: activities || [],
+    activities: activitiesWithProfiles || [],
   } as unknown as IssueWithRelations;
 }
 
