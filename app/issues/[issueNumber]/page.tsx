@@ -44,6 +44,11 @@ import ActivityCommentCard from "@/components/issue/ActivityCommentCard";
 import CommentInput from "@/components/issue/CommentInput";
 import CloseIssueDialog from "@/components/issue/CloseIssueDialog";
 import RequestApprovalDialog from "@/components/issue/RequestApprovalDialog";
+import EditFieldDialog from "@/components/issue/EditFieldDialog";
+import EditCollaboratorsDialog from "@/components/issue/EditCollaboratorsDialog";
+import EditDescriptionDialog from "@/components/issue/EditDescriptionDialog";
+import ReopenIssueDialog from "@/components/issue/ReopenIssueDialog";
+
 export default function IssueDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -55,6 +60,14 @@ export default function IssueDetailPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [editDescriptionOpen, setEditDescriptionOpen] = useState(false);
+  const [editCollaboratorsOpen, setEditCollaboratorsOpen] = useState(false);
+  const [editFieldDialog, setEditFieldDialog] = useState<{
+    open: boolean;
+    fieldType: "priority" | "category" | "deadline" | "build_version" | "solved_commit";
+    currentValue: any;
+  }>({ open: false, fieldType: "priority", currentValue: null });
 
   const handleRequestApproval = () => {
     setApprovalDialogOpen(true);
@@ -62,6 +75,58 @@ export default function IssueDetailPage() {
 
   const handleCloseIssue = () => {
     setCloseDialogOpen(true);
+  };
+
+  const handleReopen = () => {
+    setReopenDialogOpen(true);
+  };
+
+  const handleEditDescription = () => {
+    setEditDescriptionOpen(true);
+  };
+
+  const handleEditCollaborators = () => {
+    setEditCollaboratorsOpen(true);
+  };
+
+  const handleEditPriority = () => {
+    setEditFieldDialog({
+      open: true,
+      fieldType: "priority",
+      currentValue: issue?.priority,
+    });
+  };
+
+  const handleEditCategory = () => {
+    setEditFieldDialog({
+      open: true,
+      fieldType: "category",
+      currentValue: issue?.category,
+    });
+  };
+
+  const handleEditDeadline = () => {
+    setEditFieldDialog({
+      open: true,
+      fieldType: "deadline",
+      currentValue: issue?.deadline,
+    });
+  };
+
+  const handleEditBuildVersion = () => {
+    setEditFieldDialog({
+      open: true,
+      fieldType: "build_version",
+      currentValue: issue?.build_version,
+    });
+  };
+
+  const handleEditSolvedCommit = () => {
+    setEditFieldDialog({
+      open: true,
+      fieldType: "solved_commit",
+      currentValue: issue?.solved_commit_number,
+    });
   };
 
   if (isLoading) {
@@ -229,7 +294,7 @@ export default function IssueDetailPage() {
             <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">Description</h3>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={handleEditDescription}>
                   <Edit2 className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -331,6 +396,7 @@ export default function IssueDetailPage() {
                   <Button
                     variant="outline"
                     className="border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold"
+                    onClick={handleReopen}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Reopen Issue
@@ -348,7 +414,7 @@ export default function IssueDetailPage() {
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                   Collaborators
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditCollaborators}>
                   <UserPlus className="h-4 w-4" />
                 </Button>
               </div>
@@ -381,7 +447,7 @@ export default function IssueDetailPage() {
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                   Deadline
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditDeadline}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -408,7 +474,7 @@ export default function IssueDetailPage() {
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                   Build Version
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditBuildVersion}>
                   <Edit2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -429,7 +495,7 @@ export default function IssueDetailPage() {
                   <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                     Solved Commit
                   </h3>
-                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditSolvedCommit}>
                     <Edit2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -473,11 +539,17 @@ export default function IssueDetailPage() {
                   className="w-56 p-0 bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] border border-[hsl(var(--border))] rounded-2xl shadow-lg overflow-hidden"
                 >
                   <div className="p-2">
-                    <DropdownMenuItem className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg">
+                    <DropdownMenuItem 
+                      onClick={handleEditPriority}
+                      className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg"
+                    >
                       <Edit2 className="h-5 w-5 text-[hsl(var(--primary))]" />
                       Edit Priority
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg">
+                    <DropdownMenuItem 
+                      onClick={handleEditCategory}
+                      className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg"
+                    >
                       <Edit2 className="h-5 w-5 text-[hsl(var(--primary))]" />
                       Change Category
                     </DropdownMenuItem>
@@ -507,6 +579,44 @@ export default function IssueDetailPage() {
         onOpenChange={setApprovalDialogOpen}
         issueId={issue.id}
         issueNumber={issue.issue_number}
+      />
+
+      {/* Reopen Issue Dialog */}
+      <ReopenIssueDialog
+        open={reopenDialogOpen}
+        onOpenChange={setReopenDialogOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+      />
+
+      {/* Edit Description Dialog */}
+      <EditDescriptionDialog
+        open={editDescriptionOpen}
+        onOpenChange={setEditDescriptionOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+        currentDescription={issue.description || ""}
+      />
+
+      {/* Edit Collaborators Dialog */}
+      <EditCollaboratorsDialog
+        open={editCollaboratorsOpen}
+        onOpenChange={setEditCollaboratorsOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+        currentCollaborators={issue.assignees || []}
+      />
+
+      {/* Edit Field Dialog */}
+      <EditFieldDialog
+        open={editFieldDialog.open}
+        onOpenChange={(open) =>
+          setEditFieldDialog({ ...editFieldDialog, open })
+        }
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+        fieldType={editFieldDialog.fieldType}
+        currentValue={editFieldDialog.currentValue}
       />
     </div>
   );
