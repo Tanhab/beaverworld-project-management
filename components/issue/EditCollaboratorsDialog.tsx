@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { UserPlus, XCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { UserPlus, Check } from "lucide-react";
 import { useUsers } from "@/lib/hooks/useUser";
 import { useAddAssignees, useRemoveAssignees, useAddIssueActivity } from "@/lib/hooks/useIssues";
+import { cn } from "@/lib/utils";
 
 interface EditCollaboratorsDialogProps {
   open: boolean;
@@ -43,6 +44,14 @@ export default function EditCollaboratorsDialog({
       setSelectedUsers(currentCollaborators.map(c => c.id));
     }
   }, [open, currentCollaborators]);
+
+  const handleToggleUser = (userId: string) => {
+    setSelectedUsers(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
 
   const handleSave = async () => {
     try {
@@ -130,58 +139,58 @@ export default function EditCollaboratorsDialog({
           {usersLoading ? (
             <p className="text-sm text-[hsl(var(--muted-foreground))]">Loading users...</p>
           ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
-                  Select Collaborators
-                </p>
-                <ToggleGroup
-                  type="multiple"
-                  value={selectedUsers}
-                  onValueChange={setSelectedUsers}
-                  className="justify-start gap-2 flex-wrap"
-                >
-                  {allUsers.map((user) => (
-                    <ToggleGroupItem
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
+                Team Members
+              </p>
+              
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                {allUsers.map((user) => {
+                  const isSelected = selectedUsers.includes(user.id);
+                  return (
+                    <button
                       key={user.id}
-                      value={user.id}
-                      className="px-3 py-2 font-semibold border-2 data-[state=on]:bg-[hsl(var(--primary))]/10 data-[state=on]:text-[hsl(var(--primary))] data-[state=on]:border-[hsl(var(--primary))]"
+                      onClick={() => handleToggleUser(user.id)}
+                      className={cn(
+                        "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all cursor-pointer",
+                        isSelected
+                          ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5"
+                          : "border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]/50 hover:bg-[hsl(var(--muted))]/30"
+                      )}
                     >
-                      <Avatar className="h-5 w-5 mr-2">
-                        <AvatarFallback className="text-xs bg-[hsl(var(--muted))]">
-                          {user.initials || user.username.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.username}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 border-2" style={{
+                          borderColor: isSelected ? "hsl(var(--primary))" : "hsl(var(--border))"
+                        }}>
+                          <AvatarFallback 
+                            className={cn(
+                              "text-xs font-bold",
+                              isSelected 
+                                ? "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
+                                : "bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
+                            )}
+                          >
+                            {user.initials || user.username.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-semibold text-base">{user.username}</span>
+                      </div>
+                      
+                      {isSelected && (
+                        <div className="h-5 w-5 rounded-full bg-[hsl(var(--primary))] flex items-center justify-center">
+                          <Check className="h-3.5 w-3.5 text-[hsl(var(--primary-foreground))]" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               {selectedUsers.length > 0 && (
-                <div className="bg-[hsl(var(--muted))] rounded-lg p-4">
-                  <p className="text-sm font-semibold mb-2">
+                <div className="mt-4 pt-4 border-t border-[hsl(var(--border))]">
+                  <p className="text-sm font-semibold text-[hsl(var(--muted-foreground))] mb-2">
                     Selected: {selectedUsers.length} collaborator{selectedUsers.length !== 1 ? "s" : ""}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedUsers.map((userId) => {
-                      const user = allUsers.find(u => u.id === userId);
-                      if (!user) return null;
-                      return (
-                        <div
-                          key={userId}
-                          className="flex items-center gap-2 bg-[hsl(var(--card))] rounded-lg px-3 py-1.5"
-                        >
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-xs bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
-                              {user.initials || user.username.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium">{user.username}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
               )}
             </div>

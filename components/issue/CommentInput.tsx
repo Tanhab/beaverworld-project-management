@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { MessageSquare, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import TiptapEditor from "./TiptapEditor";
 import { useAddIssueActivity } from "@/lib/hooks/useIssues";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ interface CommentInputProps {
   issueStatus: string;
   onRequestApproval: () => void;
   onCloseIssue: () => void;
+  onReopenFromApproval: () => void;
 }
 
 export default function CommentInput({
@@ -19,6 +20,7 @@ export default function CommentInput({
   issueStatus,
   onRequestApproval,
   onCloseIssue,
+  onReopenFromApproval,
 }: CommentInputProps) {
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,6 +54,7 @@ export default function CommentInput({
   };
 
   const isClosed = issueStatus === "closed";
+  const isPendingApproval = issueStatus === "pending_approval";
 
   // Don't render anything if issue is closed
   if (isClosed) {
@@ -91,19 +94,31 @@ export default function CommentInput({
           )}
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={onRequestApproval}
-          className="border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold"
-        >
-          <Clock className="h-4 w-4 mr-2" />
-          Request Approval
-        </Button>
+        {/* Show different button based on status */}
+        {isPendingApproval ? (
+          <Button
+            variant="outline"
+            onClick={onReopenFromApproval}
+            className="border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold"
+          >
+            <AlertCircle className="h-4 w-4 mr-2" />
+            Back to Open
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            onClick={onRequestApproval}
+            className="border-blue-200 text-blue-600 hover:bg-blue-50 font-semibold"
+          >
+            <Clock className="h-4 w-4 mr-2" />
+            Request Approval
+          </Button>
+        )}
 
         <Button
           variant="outline"
           onClick={onCloseIssue}
-          className="border-green-200 text-green-600 hover:bg-green-50 font-semibold"
+          className="border-green-200 text-green-600 hover:bg-green-50 font-semibibold"
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
           Close Issue

@@ -121,6 +121,14 @@ export default function ActivityUpdateCard({
           description: "description",
         };
 
+        // Special handling for description
+        if (content.field === "description") {
+          return {
+            icon: fieldIcons.description,
+            message: "changed the description",
+          };
+        }
+
         return {
           icon: fieldIcons[content.field as keyof typeof fieldIcons] || <Edit2 className="h-4 w-4" />,
           message: (
@@ -148,6 +156,12 @@ export default function ActivityUpdateCard({
         return {
           icon: <AlertCircle className="h-4 w-4 text-orange-600" />,
           message: "reopened this issue",
+        };
+
+      case "archived":
+        return {
+          icon: <XCircle className="h-4 w-4 text-red-600" />,
+          message: "archived this issue",
         };
 
       default:

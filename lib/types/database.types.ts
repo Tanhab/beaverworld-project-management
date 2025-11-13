@@ -379,6 +379,7 @@ export type Database = {
         | "reopened"
         | "closed"
         | "field_update"
+        | "archived"
       issue_category: "ui" | "dev" | "media" | "default"
       issue_priority: "low" | "medium" | "high" | "urgent"
       issue_status: "open" | "pending_approval" | "closed"
@@ -540,6 +541,7 @@ export const Constants = {
         "reopened",
         "closed",
         "field_update",
+        "archived",
       ],
       issue_category: ["ui", "dev", "media", "default"],
       issue_priority: ["low", "medium", "high", "urgent"],

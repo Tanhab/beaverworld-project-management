@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useIssueByNumber } from "@/lib/hooks/useIssues";
+import { useIssueByNumber, useUpdateIssue } from "@/lib/hooks/useIssues";
 import { useCurrentUser } from "@/lib/hooks/useUser";
 import {
   Bug,
@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   UserPlus,
   MoreVertical,
+  Archive,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,8 @@ import EditFieldDialog from "@/components/issue/EditFieldDialog";
 import EditCollaboratorsDialog from "@/components/issue/EditCollaboratorsDialog";
 import EditDescriptionDialog from "@/components/issue/EditDescriptionDialog";
 import ReopenIssueDialog from "@/components/issue/ReopenIssueDialog";
+import BackToOpenDialog from "@/components/issue/BackToOpenDialog";
+import ArchiveIssueDialog from "@/components/issue/ArchiveIssueDialog"
 
 export default function IssueDetailPage() {
   const params = useParams();
@@ -56,11 +59,44 @@ export default function IssueDetailPage() {
 
   const { data: issue, isLoading, error } = useIssueByNumber(issueNumber);
   const { data: currentUser } = useCurrentUser();
+  const updateIssueMutation = useUpdateIssue();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState("");
+
+  const handleSaveTitle = async () => {
+    if (!editedTitle.trim() || editedTitle === issue?.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    try {
+      await updateIssueMutation.mutateAsync({
+        issueId: issue!.id,
+        updates: {
+          title: editedTitle,
+        },
+      });
+      setIsEditingTitle(false);
+    } catch (error) {
+      console.error("Failed to update title:", error);
+    }
+  };
+
+  const handleCancelTitleEdit = () => {
+    setEditedTitle(issue?.title || "");
+    setIsEditingTitle(false);
+  };
+
+  const handleStartTitleEdit = () => {
+    setEditedTitle(issue?.title || "");
+    setIsEditingTitle(true);
+  };
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [backToOpenDialogOpen, setBackToOpenDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [editDescriptionOpen, setEditDescriptionOpen] = useState(false);
   const [editCollaboratorsOpen, setEditCollaboratorsOpen] = useState(false);
   const [editFieldDialog, setEditFieldDialog] = useState<{
@@ -79,6 +115,14 @@ export default function IssueDetailPage() {
 
   const handleReopen = () => {
     setReopenDialogOpen(true);
+  };
+
+  const handleBackToOpen = () => {
+    setBackToOpenDialogOpen(true);
+  };
+
+  const handleArchive = () => {
+    setArchiveDialogOpen(true);
   };
 
   const handleEditDescription = () => {
@@ -199,17 +243,23 @@ export default function IssueDetailPage() {
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    defaultValue={issue.title}
-                    className="flex-1 text-3xl font-bold bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg px-4 py-2"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveTitle();
+                      if (e.key === "Escape") handleCancelTitleEdit();
+                    }}
+                    className="flex-1 text-3xl font-bold bg-[hsl(var(--card))] border-2 border-[hsl(var(--primary))] rounded-lg px-4 py-2 focus:outline-none"
                     autoFocus
                   />
-                  <Button size="sm" onClick={() => setIsEditingTitle(false)}>
-                    Save
+                  <Button size="sm" onClick={handleSaveTitle} disabled={updateIssueMutation.isPending}>
+                    {updateIssueMutation.isPending ? "Saving..." : "Save"}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setIsEditingTitle(false)}
+                    onClick={handleCancelTitleEdit}
+                    disabled={updateIssueMutation.isPending}
                   >
                     Cancel
                   </Button>
@@ -219,12 +269,14 @@ export default function IssueDetailPage() {
                   <h2 className="text-3xl font-bold text-[hsl(var(--foreground))]">
                     {issue.title}
                   </h2>
-                  <button
-                    onClick={() => setIsEditingTitle(true)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity mt-2"
-                  >
-                    <Edit2 className="h-5 w-5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))]" />
-                  </button>
+                  {issue.status !== "closed" && (
+                    <button
+                      onClick={handleStartTitleEdit}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity mt-2"
+                    >
+                      <Edit2 className="h-5 w-5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))]" />
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -294,13 +346,26 @@ export default function IssueDetailPage() {
             <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">Description</h3>
-                <Button variant="ghost" size="sm" onClick={handleEditDescription}>
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+                {issue.status !== "closed" && (
+                  <Button variant="ghost" size="sm" onClick={handleEditDescription}>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
               </div>
               <div
-                className="prose prose-sm max-w-none text-[hsl(var(--foreground))]"
+                className="prose prose-sm max-w-none text-[hsl(var(--foreground))] min-h-[120px] 
+                  prose-p:my-2 prose-p:leading-relaxed
+                  prose-headings:font-bold prose-headings:text-[hsl(var(--foreground))]
+                  prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+                  prose-blockquote:border-l-4 prose-blockquote:border-[hsl(var(--primary))] prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-[hsl(var(--muted-foreground))]
+                  prose-code:bg-[hsl(var(--muted))] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none
+                  prose-pre:bg-[hsl(var(--muted))] prose-pre:border prose-pre:border-[hsl(var(--border))] prose-pre:rounded-lg prose-pre:p-4
+                  prose-ul:list-disc prose-ul:pl-6 prose-ol:list-decimal prose-ol:pl-6
+                  prose-li:my-1
+                  prose-strong:font-bold prose-strong:text-[hsl(var(--foreground))]
+                  prose-em:italic
+                  prose-a:text-[hsl(var(--primary))] prose-a:underline"
                 dangerouslySetInnerHTML={{ __html: issue.description || "No description provided." }}
               />
             </div>
@@ -374,6 +439,7 @@ export default function IssueDetailPage() {
               issueStatus={issue.status}
               onRequestApproval={handleRequestApproval}
               onCloseIssue={handleCloseIssue}
+              onReopenFromApproval={handleBackToOpen}
             />
 
             {/* Closed Issue Banner */}
@@ -414,9 +480,11 @@ export default function IssueDetailPage() {
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                   Collaborators
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditCollaborators}>
-                  <UserPlus className="h-4 w-4" />
-                </Button>
+                {issue.status !== "closed" && (
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditCollaborators}>
+                    <UserPlus className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               {issue.assignees && issue.assignees.length > 0 ? (
                 <div className="space-y-3">
@@ -447,9 +515,11 @@ export default function IssueDetailPage() {
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                   Deadline
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditDeadline}>
-                  <Edit2 className="h-4 w-4" />
-                </Button>
+                {issue.status !== "closed" && (
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditDeadline}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               {issue.deadline ? (
                 <div
@@ -474,9 +544,11 @@ export default function IssueDetailPage() {
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                   Build Version
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditBuildVersion}>
-                  <Edit2 className="h-4 w-4" />
-                </Button>
+                {issue.status !== "closed" && (
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditBuildVersion}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
               {issue.build_version ? (
                 <div className="flex items-center gap-2 bg-[hsl(var(--muted))] rounded-lg px-3 py-2">
@@ -495,9 +567,11 @@ export default function IssueDetailPage() {
                   <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
                     Solved Commit
                   </h3>
-                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditSolvedCommit}>
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
+                  {issue.status !== "closed" && (
+                    <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditSolvedCommit}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 bg-green-50 text-green-600 rounded-lg px-3 py-2">
                   <GitBranch className="h-4 w-4" />
@@ -539,22 +613,29 @@ export default function IssueDetailPage() {
                   className="w-56 p-0 bg-[hsl(var(--card))] text-[hsl(var(--card-foreground))] border border-[hsl(var(--border))] rounded-2xl shadow-lg overflow-hidden"
                 >
                   <div className="p-2">
+                    {issue.status !== "closed" && (
+                      <>
+                        <DropdownMenuItem 
+                          onClick={handleEditPriority}
+                          className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg"
+                        >
+                          <Edit2 className="h-5 w-5 text-[hsl(var(--primary))]" />
+                          Edit Priority
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={handleEditCategory}
+                          className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg"
+                        >
+                          <Edit2 className="h-5 w-5 text-[hsl(var(--primary))]" />
+                          Change Category
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuItem 
-                      onClick={handleEditPriority}
-                      className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg"
+                      onClick={handleArchive}
+                      className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg text-red-600"
                     >
-                      <Edit2 className="h-5 w-5 text-[hsl(var(--primary))]" />
-                      Edit Priority
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={handleEditCategory}
-                      className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg"
-                    >
-                      <Edit2 className="h-5 w-5 text-[hsl(var(--primary))]" />
-                      Change Category
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] rounded-lg text-red-600">
-                      <XCircle className="h-5 w-5" />
+                      <Archive className="h-5 w-5" />
                       Archive Issue
                     </DropdownMenuItem>
                   </div>
@@ -589,6 +670,14 @@ export default function IssueDetailPage() {
         issueNumber={issue.issue_number}
       />
 
+      {/* Back to Open Dialog */}
+      <BackToOpenDialog
+        open={backToOpenDialogOpen}
+        onOpenChange={setBackToOpenDialogOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
+      />
+
       {/* Edit Description Dialog */}
       <EditDescriptionDialog
         open={editDescriptionOpen}
@@ -617,6 +706,14 @@ export default function IssueDetailPage() {
         issueNumber={issue.issue_number}
         fieldType={editFieldDialog.fieldType}
         currentValue={editFieldDialog.currentValue}
+      />
+
+      {/* Archive Issue Dialog */}
+      <ArchiveIssueDialog
+        open={archiveDialogOpen}
+        onOpenChange={setArchiveDialogOpen}
+        issueId={issue.id}
+        issueNumber={issue.issue_number}
       />
     </div>
   );

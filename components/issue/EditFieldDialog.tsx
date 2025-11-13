@@ -228,7 +228,7 @@ export default function EditFieldDialog({
           <Input
             value={value || ""}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={fieldType === "build_version" ? "e.g., v1.2.3" : "e.g., abc123"}
+            placeholder={fieldType === "build_version" ? "e.g., v1.2.3 or Build 45" : "e.g., abc123 or #55"}
             className="border-[hsl(var(--border))]"
           />
         );
