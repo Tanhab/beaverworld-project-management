@@ -24,6 +24,11 @@ import { useCreateIssue } from "@/lib/hooks/useIssues";
 import { useUsers } from "@/lib/hooks/useUser";
 import TiptapEditor from "./TiptapEditor";
 
+import ImageUploader from "@/components/issue/ImageUploader";
+import { uploadAndSaveIssueImages } from "@/lib/issues/imageStorage";
+import { toast } from "sonner";
+
+
 interface CreateIssueModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -68,10 +73,12 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
   const buildVersion = watch("buildVersion");
   const solvedCommitNumber = watch("solvedCommitNumber");
 
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+
   // Form submission handler
   const onSubmit = async (data: CreateIssueInput) => {
     try {
-      await createIssueMutation.mutateAsync({
+        const newIssue = await createIssueMutation.mutateAsync({
         issue: {
           title: data.title,
           description: data.description,
@@ -85,6 +92,15 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
         },
         assigneeIds: data.assignedTo,
       });
+
+      if (imageFiles.length > 0) {
+      try {
+        await uploadAndSaveIssueImages(imageFiles, newIssue.id);
+      } catch (error) {
+        console.error("Failed to upload images:", error);
+        toast.error("Issue created but images failed to upload");
+      }
+    }
 
       // Reset form and close modal on success
       reset();
@@ -146,6 +162,14 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
                   error={errors.description?.message}
                 />
               </div>
+                {/* images */}
+              <div>
+              <Label className="py-2">Images (Optional)</Label>
+              <ImageUploader
+                onImagesChange={setImageFiles}
+                maxImages={3}
+              />
+            </div>
 
               {/* Priority */}
               <div className="space-y-2">

@@ -51,6 +51,10 @@ import EditDescriptionDialog from "@/components/issue/EditDescriptionDialog";
 import ReopenIssueDialog from "@/components/issue/ReopenIssueDialog";
 import BackToOpenDialog from "@/components/issue/BackToOpenDialog";
 import ArchiveIssueDialog from "@/components/issue/ArchiveIssueDialog"
+import IssueImagesDisplay from "@/components/issue/IssueImagesDisplay";
+import { deleteIssueImageComplete } from "@/lib/issues/imageStorage";
+import { toast } from "sonner";
+
 
 export default function IssueDetailPage() {
   const params = useParams();
@@ -92,6 +96,19 @@ export default function IssueDetailPage() {
     setEditedTitle(issue?.title || "");
     setIsEditingTitle(true);
   };
+
+  const handleDeleteImage = async (imageId: string) => {
+  const image = issue!.images?.find(img => img.id === imageId);
+  if (!image) return;
+
+  try {
+    await deleteIssueImageComplete(imageId, image.storage_path);
+    toast.success("Image deleted");
+    // Refetch issue to update UI
+  } catch (error) {
+    toast.error("Failed to delete image");
+  }
+};
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
@@ -369,6 +386,15 @@ export default function IssueDetailPage() {
                 dangerouslySetInnerHTML={{ __html: issue.description || "No description provided." }}
               />
             </div>
+
+            {issue.images && issue.images.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-[hsl(var(--border))]">
+                    <IssueImagesDisplay
+                    images={issue.images}
+                    
+                    />
+                </div>
+                )}
 
             {/* Activity Thread */}
             <div className="space-y-4">
