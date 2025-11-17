@@ -335,7 +335,7 @@ export default function ImageUploader({
               <div
                 onClick={() => openFileDialog(index)}
                 {...createSlotHandlers(index)}
-                className="aspect-[4/3] rounded-lg border-2 border-dashed border-[hsl(var(--border))] flex flex-col items-center justify-center cursor-pointer hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]/30 transition-all group"
+                className="aspect-4/3 rounded-lg border-2 border-dashed border-[hsl(var(--border))] flex flex-col items-center justify-center cursor-pointer hover:border-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))]/30 transition-all group"
               >
                 <Upload className="h-6 w-6 text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--primary))] transition-colors mb-1" />
                 <p className="text-[10px] text-[hsl(var(--muted-foreground))] font-medium">

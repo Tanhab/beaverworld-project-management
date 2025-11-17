@@ -1,4 +1,4 @@
-// lib/api/issues.ts
+// lib/api/issues.ts - OPTIMIZED with new profile schema
 import { createClient } from '@/lib/supabase/client';
 import type { 
   Issue, 
@@ -13,6 +13,7 @@ import { Json } from '../types/database.types';
 
 /**
  * Get all issues with optional filtering
+ * OPTIMIZED: Single query with joins instead of N+1 queries
  */
 export async function getAllIssues(filters?: {
   status?: Database["public"]["Enums"]["issue_status"][];
@@ -30,7 +31,14 @@ export async function getAllIssues(filters?: {
   let query = supabase
     .from('issues')
     .select(`
-      *
+      *,
+      created_by_profile:profiles!issues_created_by_fkey(
+        id, username, initials, avatar_url
+      ),
+      closed_by_profile:profiles!issues_closed_by_fkey(
+        id, username, initials, avatar_url
+      ),
+      images:issue_images(id, storage_path, display_order)
     `)
     .order('updated_at', { ascending: false });
 
@@ -71,152 +79,95 @@ export async function getAllIssues(filters?: {
   
   const { data: issues, error } = await query;
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching issues:', error);
+    throw error;
+  }
   if (!issues) return [];
 
-  // Fetch related data separately
-  const issuesWithRelations = await Promise.all(
+  // Fetch assignees separately (can't join many-to-many efficiently)
+  const issuesWithAssignees = await Promise.all(
     issues.map(async (issue) => {
-      // Fetch creator profile with initials
-      const { data: createdByProfile } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url, initials')
-        .eq('id', issue.created_by)
-        .single();
-
-      // Fetch assignees with initials
+      // Fetch assignees with profiles in one query
       const { data: assigneeData } = await supabase
         .from('issue_assignees')
-        .select('user_id')
+        .select(`
+          profiles!issue_assignees_user_id_fkey(
+            id, username, initials, avatar_url
+          )
+        `)
         .eq('issue_id', issue.id);
 
-      let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
-      if (assigneeData && assigneeData.length > 0) {
-        const userIds = assigneeData.map(a => a.user_id);
-        const { data: users } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url, initials')
-          .in('id', userIds);
-        assignees = users || [];
-      }
-
-      // Fetch images
-      const { data: images } = await supabase
-        .from('issue_images')
-        .select('id, storage_path, display_order')
-        .eq('issue_id', issue.id)
-        .order('display_order');
+      const assignees = assigneeData?.map(a => a.profiles).filter(Boolean) || [];
 
       return {
         ...issue,
-        created_by_profile: createdByProfile || undefined,
-        assignees: assignees || [],
-        images: images || [],
-        activities: [],
+        assignees,
+        activities: [], // Don't fetch activities for list view (performance)
       };
     })
   );
   
-  return issuesWithRelations as unknown as IssueWithRelations[];
+  return issuesWithAssignees as unknown as IssueWithRelations[];
 }
 
 /**
  * Get a single issue by ID with all relations
+ * OPTIMIZED: Better joins and batched profile fetching
  */
 export async function getIssueById(issueId: string): Promise<IssueWithRelations | null> {
   const supabase = createClient();
   
-  // Fetch the issue
+  // Fetch issue with creator, closer, and images in one query
   const { data: issue, error } = await supabase
     .from('issues')
-    .select('*')
+    .select(`
+      *,
+      created_by_profile:profiles!issues_created_by_fkey(
+        id, username, initials, avatar_url
+      ),
+      closed_by_profile:profiles!issues_closed_by_fkey(
+        id, username, initials, avatar_url
+      ),
+      images:issue_images(*)
+    `)
     .eq('id', issueId)
     .single();
   
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching issue:', error);
+    throw error;
+  }
   if (!issue) return null;
 
-  // Fetch creator profile with initials
-  const { data: createdByProfile } = await supabase
-    .from('profiles')
-    .select('id, username, avatar_url, initials')
-    .eq('id', issue.created_by)
-    .single();
-
-  // Fetch closed by profile if exists
-  let closedByProfile = undefined;
-  if (issue.closed_by) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url, initials')
-      .eq('id', issue.closed_by)
-      .single();
-    closedByProfile = data || undefined;
-  }
-
-  // Fetch assignees with initials
+  // Fetch assignees with profiles
   const { data: assigneeData } = await supabase
     .from('issue_assignees')
-    .select('user_id')
+    .select(`
+      profiles!issue_assignees_user_id_fkey(
+        id, username, initials, avatar_url
+      )
+    `)
     .eq('issue_id', issue.id);
 
-  let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
-  if (assigneeData && assigneeData.length > 0) {
-    const userIds = assigneeData.map(a => a.user_id);
-    const { data: users } = await supabase
-      .from('profiles')
-      .select('id, username, avatar_url, initials')
-      .in('id', userIds);
-    assignees = users || [];
-  }
+  const assignees = assigneeData?.map(a => a.profiles).filter(Boolean) || [];
 
-  // Fetch images
-  const { data: images } = await supabase
-    .from('issue_images')
-    .select('*')
-    .eq('issue_id', issue.id)
-    .order('display_order');
-
-  // ========== ACTIVITIES WITH USER PROFILES ==========
-  // Fetch activities
+  // Fetch activities with user profiles in one query
   const { data: activities } = await supabase
     .from('issue_activities')
-    .select('*')
+    .select(`
+      *,
+      user_profile:profiles!issue_activities_user_id_fkey(
+        id, username, initials, avatar_url
+      )
+    `)
     .eq('issue_id', issue.id)
     .order('created_at', { ascending: false });
   
-  // Fetch user profiles for all activities
-  let activitiesWithProfiles: { user_profile: { id: string; username: string; initials: string; avatar_url: string | null; } | null; activity_type: Database["public"]["Enums"]["activity_type"]; content: Json; created_at: string; id: string; issue_id: string; user_id: string; }[] = [];
-  if (activities && activities.length > 0) {
-    // Get unique user IDs from activities
-    const activityUserIds = [...new Set(activities.map(a => a.user_id))];
-    
-    // Fetch all user profiles at once
-    const { data: activityUserProfiles } = await supabase
-      .from('profiles')
-      .select('id, username, initials, avatar_url')
-      .in('id', activityUserIds);
-    
-    // Create a map for quick lookup
-    const profileMap = new Map(
-      activityUserProfiles?.map(p => [p.id, p]) || []
-    );
-    
-    // Map profiles to activities
-    activitiesWithProfiles = activities.map(activity => ({
-      ...activity,
-      user_profile: profileMap.get(activity.user_id) || null
-    }));
-  }
-  // ================================================
-  
   return {
     ...issue,
-    created_by_profile: createdByProfile || undefined,
-    closed_by_profile: closedByProfile,
-    assignees: assignees || [],
-    images: images || [],
-    activities: activitiesWithProfiles || [],
+    assignees,
+    activities: activities || [],
   } as unknown as IssueWithRelations;
 }
 
@@ -401,6 +352,16 @@ export async function addAssignees(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
   
+  // Check if users exist in profiles table
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id')
+    .in('id', userIds);
+  
+  if (!profiles || profiles.length !== userIds.length) {
+    throw new Error('One or more users not found');
+  }
+  
   const assignees = userIds.map(userId => ({
     issue_id: issueId,
     user_id: userId,
@@ -478,6 +439,7 @@ export async function addIssueActivity(
 
 /**
  * Get issues assigned to current user
+ * OPTIMIZED: Single query with joins
  */
 export async function getMyIssues(): Promise<IssueWithRelations[]> {
   const supabase = createClient();
@@ -485,6 +447,7 @@ export async function getMyIssues(): Promise<IssueWithRelations[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
   
+  // Get issue IDs assigned to user
   const { data: assignments, error: assignError } = await supabase
     .from('issue_assignees')
     .select('issue_id')
@@ -492,13 +455,19 @@ export async function getMyIssues(): Promise<IssueWithRelations[]> {
   
   if (assignError) throw assignError;
   
-  const issueIds = assignments.map(a => a.issue_id);
-  
+  const issueIds = assignments?.map(a => a.issue_id) || [];
   if (issueIds.length === 0) return [];
   
+  // Fetch issues with profiles
   const { data: issues, error } = await supabase
     .from('issues')
-    .select('*')
+    .select(`
+      *,
+      created_by_profile:profiles!issues_created_by_fkey(
+        id, username, initials, avatar_url
+      ),
+      images:issue_images(id, storage_path, display_order)
+    `)
     .in('id', issueIds)
     .eq('is_archived', false)
     .order('updated_at', { ascending: false });
@@ -506,45 +475,27 @@ export async function getMyIssues(): Promise<IssueWithRelations[]> {
   if (error) throw error;
   if (!issues) return [];
 
-  // Fetch related data for each issue
-  const issuesWithRelations = await Promise.all(
+  // Fetch assignees for each issue
+  const issuesWithAssignees = await Promise.all(
     issues.map(async (issue) => {
-      const { data: createdByProfile } = await supabase
-        .from('profiles')
-        .select('id, username, avatar_url, initials')
-        .eq('id', issue.created_by)
-        .single();
-
       const { data: assigneeData } = await supabase
         .from('issue_assignees')
-        .select('user_id')
+        .select(`
+          profiles!issue_assignees_user_id_fkey(
+            id, username, initials, avatar_url
+          )
+        `)
         .eq('issue_id', issue.id);
 
-      let assignees: Array<{ id: string; username: string; avatar_url: string | null; initials: string }> = [];
-      if (assigneeData && assigneeData.length > 0) {
-        const userIds = assigneeData.map(a => a.user_id);
-        const { data: users } = await supabase
-          .from('profiles')
-          .select('id, username, avatar_url, initials')
-          .in('id', userIds);
-        assignees = users || [];
-      }
-
-      const { data: images } = await supabase
-        .from('issue_images')
-        .select('id, storage_path, display_order')
-        .eq('issue_id', issue.id)
-        .order('display_order');
+      const assignees = assigneeData?.map(a => a.profiles).filter(Boolean) || [];
 
       return {
         ...issue,
-        created_by_profile: createdByProfile || undefined,
-        assignees: assignees || [],
-        images: images || [],
+        assignees,
         activities: [],
       };
     })
   );
   
-  return issuesWithRelations as unknown as IssueWithRelations[];
+  return issuesWithAssignees as unknown as IssueWithRelations[];
 }

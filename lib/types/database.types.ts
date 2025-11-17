@@ -39,6 +39,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      boards: {
+        Row: {
+          category: Database["public"]["Enums"]["board_category"] | null
+          color: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["board_category"] | null
+          color?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_pinned?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["board_category"] | null
+          color?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       issue_activities: {
         Row: {
           activity_type: Database["public"]["Enums"]["activity_type"]
@@ -207,6 +251,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "issues_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "issues_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "issues_scenario_id_fkey"
             columns: ["scenario_id"]
             isOneToOne: false
@@ -306,36 +364,72 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          created_at: string | null
+          created_at: string
           discord_id: string | null
-          email: string | null
+          email: string
           id: string
           initials: string
           roles: string[]
-          updated_at: string | null
+          updated_at: string
           username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          discord_id?: string | null
+          email: string
+          id: string
+          initials: string
+          roles?: string[]
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          discord_id?: string | null
+          email?: string
+          id?: string
+          initials?: string
+          roles?: string[]
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      profiles_backup: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          discord_id: string | null
+          email: string | null
+          id: string | null
+          initials: string | null
+          roles: string[] | null
+          updated_at: string | null
+          username: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
           discord_id?: string | null
           email?: string | null
-          id: string
-          initials?: string
-          roles?: string[]
+          id?: string | null
+          initials?: string | null
+          roles?: string[] | null
           updated_at?: string | null
-          username: string
+          username?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string | null
           discord_id?: string | null
           email?: string | null
-          id?: string
-          initials?: string
-          roles?: string[]
+          id?: string | null
+          initials?: string | null
+          roles?: string[] | null
           updated_at?: string | null
-          username?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -363,6 +457,211 @@ export type Database = {
         }
         Relationships: []
       }
+      task_activity: {
+        Row: {
+          action: Database["public"]["Enums"]["task_action"]
+          created_at: string
+          details: Json
+          id: string
+          task_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["task_action"]
+          created_at?: string
+          details?: Json
+          id?: string
+          task_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["task_action"]
+          created_at?: string
+          details?: Json
+          id?: string
+          task_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_activity_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_columns: {
+        Row: {
+          board_id: string
+          color: string | null
+          created_at: string
+          id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          board_id: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          position: number
+          title: string
+        }
+        Update: {
+          board_id?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_columns_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_edited: boolean
+          task_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_edited?: boolean
+          task_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_edited?: boolean
+          task_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string[]
+          board_id: string
+          column_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          is_completed: boolean
+          position: number
+          priority: Database["public"]["Enums"]["task_priority"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string[]
+          board_id: string
+          column_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          position: number
+          priority?: Database["public"]["Enums"]["task_priority"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string[]
+          board_id?: string
+          column_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          is_completed?: boolean
+          position?: number
+          priority?: Database["public"]["Enums"]["task_priority"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "boards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "task_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -380,6 +679,7 @@ export type Database = {
         | "closed"
         | "field_update"
         | "archived"
+      board_category: "Dev" | "UI" | "Media" | "Debug" | "General"
       issue_category: "ui" | "dev" | "media" | "default"
       issue_priority: "low" | "medium" | "high" | "urgent"
       issue_status: "open" | "pending_approval" | "closed"
@@ -403,6 +703,14 @@ export type Database = {
         | "announcement"
         | "reminder"
         | "mention"
+      task_action:
+        | "created"
+        | "moved"
+        | "updated"
+        | "completed"
+        | "commented"
+        | "assigned"
+      task_priority: "Low" | "Medium" | "High" | "Urgent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -543,6 +851,7 @@ export const Constants = {
         "field_update",
         "archived",
       ],
+      board_category: ["Dev", "UI", "Media", "Debug", "General"],
       issue_category: ["ui", "dev", "media", "default"],
       issue_priority: ["low", "medium", "high", "urgent"],
       issue_status: ["open", "pending_approval", "closed"],
@@ -567,6 +876,15 @@ export const Constants = {
         "reminder",
         "mention",
       ],
+      task_action: [
+        "created",
+        "moved",
+        "updated",
+        "completed",
+        "commented",
+        "assigned",
+      ],
+      task_priority: ["Low", "Medium", "High", "Urgent"],
     },
   },
 } as const
