@@ -3,9 +3,10 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { Clock, CheckCircle2, AlertCircle, MessageSquare, GripVertical } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, MessageSquare, GripVertical, CheckSquare, Square } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useUsers } from '@/lib/hooks/useUser';
 import type { Task } from '@/lib/types/database';
 
 interface TaskCardProps {
@@ -29,6 +30,9 @@ const getPriorityColor = (priority: string) => {
 };
 
 export function TaskCard({ task, onClick }: TaskCardProps) {
+  const { data: allUsers } = useUsers();
+  const users = allUsers || [];
+  
   const {
     attributes,
     listeners,
@@ -45,18 +49,30 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.is_completed;
   const dueDate = task.due_date ? new Date(task.due_date) : null;
+  
+  // Get actual user objects
+  const assignedUsers = users.filter(u => task.assigned_to?.includes(u.id));
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        'group cursor-pointer rounded-xl border p-4 transition-all bg-[hsl(var(--card))]',
+        'group cursor-pointer rounded-xl border p-4 transition-all bg-[hsl(var(--card))] relative',
         'border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] hover:shadow-md',
         isDragging && 'opacity-50 shadow-2xl scale-105',
         task.is_completed && 'opacity-60'
       )}
     >
+      {/* Completion Checkbox - Top Right */}
+      <div className="absolute top-3 right-3">
+        {task.is_completed ? (
+          <CheckSquare className="h-5 w-5 text-green-600" />
+        ) : (
+          <Square className="h-5 w-5 text-[hsl(var(--muted-foreground))] opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
+      </div>
+
       {/* Drag Handle + Title */}
       <div className="flex items-start gap-2 mb-3">
         <button
@@ -68,18 +84,13 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           <GripVertical className="h-4 w-4" />
         </button>
         
-        <div className="flex-1 min-w-0" onClick={onClick}>
-          <div className="flex items-start gap-2 mb-2">
-            <h4 className={cn(
-              "text-base font-bold text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] transition-colors line-clamp-2",
-              task.is_completed && "line-through"
-            )}>
-              {task.title}
-            </h4>
-            {task.is_completed && (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600 mt-0.5" />
-            )}
-          </div>
+        <div className="flex-1 min-w-0 pr-6" onClick={onClick}>
+          <h4 className={cn(
+            "text-base font-bold text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] transition-colors line-clamp-2 mb-2",
+            task.is_completed && "line-through"
+          )}>
+            {task.title}
+          </h4>
 
           {/* Description preview */}
           {task.description && (
@@ -118,18 +129,19 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             </div>
 
             {/* Assigned Users */}
-            {task.assigned_to && task.assigned_to.length > 0 && (
+            {assignedUsers.length > 0 && (
               <div className="flex items-center -space-x-2">
-                {task.assigned_to.slice(0, 3).map((userId, idx) => (
-                  <Avatar key={idx} className="h-6 w-6 border-2 border-[hsl(var(--card))]">
+                {assignedUsers.slice(0, 3).map((user) => (
+                  <Avatar key={user.id} className="h-6 w-6 border-2 border-[hsl(var(--card))]">
+                    {user.avatar_url && <AvatarImage src={user.avatar_url} />}
                     <AvatarFallback className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[10px] font-bold">
-                      {userId.substring(0, 2).toUpperCase()}
+                      {user.initials || user.username?.substring(0, 2).toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                 ))}
-                {task.assigned_to.length > 3 && (
+                {assignedUsers.length > 3 && (
                   <div className="h-6 w-6 rounded-full border-2 border-[hsl(var(--card))] bg-[hsl(var(--muted))] flex items-center justify-center text-[10px] font-bold">
-                    +{task.assigned_to.length - 3}
+                    +{assignedUsers.length - 3}
                   </div>
                 )}
               </div>

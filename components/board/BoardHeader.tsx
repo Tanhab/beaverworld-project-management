@@ -1,16 +1,26 @@
 'use client';
 
-import { ArrowLeft, Pin, Settings, Users } from 'lucide-react';
+import { Activity, MoreVertical, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { Board } from '@/lib/types/database';
-import { useToggleBoardPin } from '@/lib/hooks/useBoards';
 
 interface BoardHeaderProps {
   board: Board;
   currentUserId: string;
+  onAddColumn?: () => void;
+  columnCount?: number;
+  onEditBoard?: () => void;
+  onDeleteBoard?: () => void;
 }
 
 const getCategoryColor = (category: string) => {
@@ -28,75 +38,87 @@ const getCategoryColor = (category: string) => {
   }
 };
 
-export function BoardHeader({ board, currentUserId }: BoardHeaderProps) {
+export function BoardHeader({ 
+  board, 
+  currentUserId, 
+  onAddColumn, 
+  columnCount = 0,
+  onEditBoard,
+  onDeleteBoard 
+}: BoardHeaderProps) {
   const router = useRouter();
-  const togglePin = useToggleBoardPin();
-
-  const handleTogglePin = async () => {
-    try {
-      await togglePin.mutateAsync({
-        boardId: board.id,
-        isPinned: !board.is_pinned,
-      });
-    } catch (error) {
-      console.error('Failed to toggle pin:', error);
-    }
-  };
 
   return (
     <div className="sticky top-16 z-30 border-b border-[hsl(var(--border))] bg-[hsl(var(--background))]">
       <div className="mx-auto max-w-[1600px] px-5 py-4">
         {/* Top Row */}
         <div className="flex items-center justify-between gap-4 mb-3">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/boards')}
-              className="h-9 gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-
-            <div className="h-6 w-px bg-[hsl(var(--border))]" />
-
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">
-                {board.title}
-              </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-[hsl(var(--foreground))]">
+              {board.title}
+            </h1>
+            {board.category && (
               <Badge
                 variant="outline"
                 className={cn(
                   'px-2.5 py-0.5 text-xs font-semibold',
-                  getCategoryColor(board.category? board.category : "Default")
+                  getCategoryColor(board.category)
                 )}
               >
-                {board.category?.toUpperCase()}
+                {board.category.toUpperCase()}
               </Badge>
-            </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant={board.is_pinned ? 'default' : 'outline'}
-              size="sm"
-              onClick={handleTogglePin}
-              className="gap-2"
-            >
-              <Pin className={cn('h-4 w-4', board.is_pinned && 'fill-current')} />
-              {board.is_pinned ? 'Pinned' : 'Pin'}
+            <Button variant="outline" size="sm" className="gap-2">
+              <Activity className="h-4 w-4" />
+              Activity
             </Button>
 
-            <Button variant="outline" size="sm" className="gap-2">
-              <Users className="h-4 w-4" />
-              Share
-            </Button>
-
-            <Button variant="outline" size="sm" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <MoreVertical className="h-4 w-4" />
+                  Options
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-[hsl(var(--card))] border-[hsl(var(--border))]">
+                {columnCount < 5 && onAddColumn && (
+                  <>
+                    <DropdownMenuItem 
+                      onClick={onAddColumn} 
+                      className="cursor-pointer gap-2 py-2.5 focus:bg-[hsl(var(--accent))]"
+                    >
+                      <Plus className="h-4 w-4 text-[hsl(var(--primary))]" />
+                      <span className="font-medium">Add Column</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[hsl(var(--border))]" />
+                  </>
+                )}
+                {onEditBoard && (
+                  <>
+                    <DropdownMenuItem 
+                      onClick={onEditBoard} 
+                      className="cursor-pointer gap-2 py-2.5 focus:bg-[hsl(var(--accent))]"
+                    >
+                      <Pencil className="h-4 w-4 text-[hsl(var(--primary))]" />
+                      <span className="font-medium">Edit Board</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-[hsl(var(--border))]" />
+                  </>
+                )}
+                {onDeleteBoard && (
+                  <DropdownMenuItem 
+                    onClick={onDeleteBoard} 
+                    className="cursor-pointer gap-2 py-2.5 text-red-600 focus:text-red-600 focus:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="font-semibold">Delete Board</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

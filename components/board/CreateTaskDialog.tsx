@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCreateTask } from '@/lib/hooks/useTasks';
-import { createTaskSchema, type CreateTaskFormData } from '@/lib/validations/tasks';
+import { useUsers } from '@/lib/hooks/useUser';
+import { getNextTaskPosition } from '@/lib/api/tasks';
+import { createTaskSchema, type CreateTaskFormData } from '@/lib/validations/task';
 import type { TaskPriority } from '@/lib/types/database';
+import { cn } from '@/lib/utils';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -42,8 +50,9 @@ export function CreateTaskDialog({
   userId,
 }: CreateTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const createTask = useCreateTask(userId, boardId);
-  const supabase = createClient();
+  const { data: users = [] } = useUsers();
 
   const {
     register,
@@ -51,6 +60,7 @@ export function CreateTaskDialog({
     reset,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<CreateTaskFormData>({
     resolver: zodResolver(createTaskSchema),
@@ -64,24 +74,26 @@ export function CreateTaskDialog({
   const onSubmit = async (data: CreateTaskFormData) => {
     setIsLoading(true);
     try {
-      // Get next position for the column
-      const { data: tasksData } = await supabase
-        .from('tasks')
-        .select('position')
-        .eq('column_id', columnId)
-        .order('position', { ascending: false })
-        .limit(1)
-        .single();
+      // Use the API's getNextTaskPosition function instead of direct query
+      const position = await getNextTaskPosition(columnId);
 
-      const position = tasksData ? tasksData.position + 1000 : 1000;
-
-      await createTask.mutateAsync({
+      // Clean up data - remove empty due_date
+      const taskData: any = {
         ...data,
         board_id: boardId,
         column_id: columnId,
         position,
-      });
+        assigned_to: selectedAssignees,
+      };
+
+      // Only include due_date if it has a value
+      if (!taskData.due_date || taskData.due_date === '') {
+        delete taskData.due_date;
+      }
+
+      await createTask.mutateAsync(taskData);
       reset();
+      setSelectedAssignees([]);
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to create task:', error);
@@ -93,29 +105,27 @@ export function CreateTaskDialog({
   const handleClose = () => {
     if (!isLoading) {
       reset();
+      setSelectedAssignees([]);
       onOpenChange(false);
     }
   };
 
+  const toggleAssignee = (assigneeId: string) => {
+    setSelectedAssignees(prev =>
+      prev.includes(assigneeId)
+        ? prev.filter(id => id !== assigneeId)
+        : [...prev, assigneeId]
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] p-0 gap-0">
+      <DialogContent className="sm:max-w-[600px] p-0 gap-0 bg-[hsl(var(--card))] border-[hsl(var(--border))]">
         <DialogHeader className="px-6 py-4 border-b border-[hsl(var(--border))]">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-bold">Create New Task</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              disabled={isLoading}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-bold text-[hsl(var(--foreground))]">Create New Task</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-5 bg-[hsl(var(--card))]">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title" className="text-sm font-semibold">
@@ -148,26 +158,84 @@ export function CreateTaskDialog({
             />
           </div>
 
+          {/* Assignees */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">
+              Assign To <span className="text-[hsl(var(--muted-foreground))] text-xs font-normal">(optional)</span>
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-left font-normal"
+                  disabled={isLoading}
+                >
+                  {selectedAssignees.length === 0 ? (
+                    <span className="text-[hsl(var(--muted-foreground))]">Select team members...</span>
+                  ) : (
+                    <span className="text-[hsl(var(--foreground))] font-medium">
+                      {selectedAssignees.length} member{selectedAssignees.length !== 1 ? 's' : ''} selected
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[280px] p-0 bg-[hsl(var(--card))]" align="start">
+                <div className="px-4 py-3 border-b border-[hsl(var(--border))]">
+                  <h4 className="font-bold text-sm text-[hsl(var(--foreground))]">Assign Team Members</h4>
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {users.map((user) => (
+                    <label
+                      key={user.id}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-[hsl(var(--accent))] cursor-pointer transition-colors border-b border-[hsl(var(--border))] last:border-0"
+                    >
+                      <Checkbox
+                        checked={selectedAssignees.includes(user.id)}
+                        onCheckedChange={() => toggleAssignee(user.id)}
+                      />
+                      <span className={cn(
+                        "text-sm font-medium flex-1",
+                        selectedAssignees.includes(user.id) 
+                          ? "text-[hsl(var(--primary))] font-bold" 
+                          : "text-[hsl(var(--foreground))]"
+                      )}>
+                        {user.username}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+
           {/* Priority and Due Date Row */}
           <div className="grid grid-cols-2 gap-4">
             {/* Priority */}
             <div className="space-y-2">
               <Label htmlFor="priority" className="text-sm font-semibold">
-                Priority
+                Priority <span className="text-[hsl(var(--muted-foreground))] text-xs font-normal">(optional)</span>
               </Label>
               <Select
                 value={priority}
                 onValueChange={(value) => setValue('priority', value as TaskPriority)}
                 disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-[hsl(var(--card))]">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Urgent">Urgent</SelectItem>
+                <SelectContent className="bg-[hsl(var(--card))] border-[hsl(var(--border))]">
+                  <SelectItem value="Low" className="py-2.5 cursor-pointer focus:bg-[hsl(var(--accent))]">
+                    <span className="font-medium">Low</span>
+                  </SelectItem>
+                  <SelectItem value="Medium" className="py-2.5 cursor-pointer focus:bg-[hsl(var(--accent))]">
+                    <span className="font-medium">Medium</span>
+                  </SelectItem>
+                  <SelectItem value="High" className="py-2.5 cursor-pointer focus:bg-[hsl(var(--accent))]">
+                    <span className="font-medium">High</span>
+                  </SelectItem>
+                  <SelectItem value="Urgent" className="py-2.5 cursor-pointer focus:bg-[hsl(var(--accent))]">
+                    <span className="font-medium">Urgent</span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -175,7 +243,7 @@ export function CreateTaskDialog({
             {/* Due Date */}
             <div className="space-y-2">
               <Label htmlFor="due_date" className="text-sm font-semibold">
-                Due Date
+                Due Date <span className="text-[hsl(var(--muted-foreground))] text-xs font-normal">(optional)</span>
               </Label>
               <Input
                 id="due_date"
