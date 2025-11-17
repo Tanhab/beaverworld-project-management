@@ -568,7 +568,7 @@ export default function IssueDetailPage() {
             <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
-                  Build Version
+                  Game Build Version
                 </h3>
                 {issue.status !== "closed" && (
                   <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditBuildVersion}>
@@ -591,7 +591,7 @@ export default function IssueDetailPage() {
               <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
-                    Solved Commit
+                    Solved in Branch Number
                   </h3>
                   {issue.status !== "closed" && (
                     <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleEditSolvedCommit}>

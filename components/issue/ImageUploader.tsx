@@ -284,7 +284,7 @@ export default function ImageUploader({
 
             {image ? (
               // Filled slot with image - smaller aspect ratio
-              <div className="relative aspect-[4/3] rounded-lg border-2 border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--muted))]">
+              <div className="relative aspect-4/3 rounded-lg border-2 border-[hsl(var(--border))] overflow-hidden bg-[hsl(var(--muted))]">
                 {/* Image Preview */}
                 <img
                   src={image.preview}
