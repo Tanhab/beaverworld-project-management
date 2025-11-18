@@ -209,7 +209,8 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
                           onClick={() => handleNotificationItemClick(n)}
                           className={cn(
                             "w-full text-left px-6 py-4 transition-colors cursor-pointer",
-                            "hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] focus-visible:outline-none"
+                            "hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] focus-visible:outline-none",
+                            n.read && "opacity-60"
                           )}
                         >
                           <div className="flex gap-3 items-start">
@@ -221,7 +222,10 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold mb-1 line-clamp-1">
+                              <p className={cn(
+                                "text-sm font-bold mb-1 line-clamp-1",
+                                n.read && "text-[hsl(var(--muted-foreground))]"
+                              )}>
                                 {n.title}
                               </p>
                               <p className="text-sm text-[hsl(var(--muted-foreground))] line-clamp-2 mb-2">

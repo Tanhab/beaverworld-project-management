@@ -152,6 +152,11 @@ export function useNotifications(options: UseNotificationsOptions) {
     async (notification: Notification) => {
       // Mark as read if unread
       if (!notification.read) {
+        // Optimistically update unread count immediately
+        queryClient.setQueryData(['notifications', 'unread-count', userId], (old: number = 0) => 
+          Math.max(0, old - 1)
+        );
+        
         await markAsReadMutation.mutateAsync(notification.id);
       }
 
@@ -160,7 +165,7 @@ export function useNotifications(options: UseNotificationsOptions) {
         window.location.href = notification.link;
       }
     },
-    [markAsReadMutation]
+    [markAsReadMutation, queryClient, userId]
   );
 
   return {

@@ -206,7 +206,7 @@ function getNotificationEmoji(type: NotificationType): string {
     task_assigned: '📋',
     task_moved: '➡️',
     task_deadline: '⏰',
-    board_created: '📊',
+    board_created: '📌',
     board_updated: '🔄',
     announcement: '📣',
     reminder: '🔔',

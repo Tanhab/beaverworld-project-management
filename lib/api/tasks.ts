@@ -89,10 +89,14 @@ export async function createTask(
   // Notify assignees
   if (data.assigned_to && data.assigned_to.length > 0) {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: creatorProfile } = await supabase.from('profiles').select('username').eq('id', user?.id || '').single();
+      const creatorName = creatorProfile?.username || 'Someone';
+      
       const notifications = await createNotificationsForUsers(data.assigned_to, {
         type: 'task_assigned',
         title: `Task assigned to you`,
-        message: data.title,
+        message: `${creatorName} assigned you to: ${data.title}`,
         link: `/boards/${data.board_id}?task=${data.id}`,
         priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
         task_id: data.id,
@@ -214,10 +218,13 @@ export async function updateTask(
       const notifyIds = data.assigned_to.filter((id: string) => id !== user?.id);
       
       if (notifyIds.length > 0) {
+        const { data: completerProfile } = await supabase.from('profiles').select('username').eq('id', user?.id || '').single();
+        const completerName = completerProfile?.username || 'Someone';
+        
         const notifications = await createNotificationsForUsers(notifyIds, {
           type: 'task_moved',
-          title: `Task completed`,
-          message: data.title,
+          title: `Task marked as complete`,
+          message: `${completerName} completed: ${data.title}`,
           link: `/boards/${data.board_id}?task=${data.id}`,
           priority: 'normal',
           task_id: data.id,
@@ -241,6 +248,95 @@ export async function updateTask(
       }
     } catch (error) {
       console.error('Failed to send task completion notifications:', error);
+    }
+  }
+  
+  // Notify on assignee changes
+  else if (input.assigned_to && oldTask?.assigned_to) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const oldAssignees = oldTask.assigned_to || [];
+      const newAssignees = input.assigned_to.filter((id: string) => !oldAssignees.includes(id));
+      const removedAssignees = oldAssignees.filter((id: string) => !input.assigned_to!.includes(id));
+      
+      // Notify newly added assignees
+      if (newAssignees.length > 0) {
+        const { data: assignerProfile } = await supabase.from('profiles').select('username').eq('id', user?.id || '').single();
+        const assignerName = assignerProfile?.username || 'Someone';
+        
+        const notifications = await createNotificationsForUsers(newAssignees, {
+          type: 'task_assigned',
+          title: `Task assigned to you`,
+          message: `${assignerName} assigned you to: ${data.title}`,
+          link: `/boards/${data.board_id}?task=${data.id}`,
+          priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+          task_id: data.id,
+          board_id: data.board_id,
+        });
+
+        const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', newAssignees);
+        const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+
+        if (usersWithDiscord.length > 0 && notifications.length > 0) {
+          await sendDiscordNotification({
+            notificationId: notifications[0].id,
+            type: 'task_assigned',
+            title: `Task assigned`,
+            message: `${assignerName} assigned task: ${data.title}`,
+            link: `/boards/${data.board_id}?task=${data.id}`,
+            priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+            users: usersWithDiscord,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send assignee change notifications:', error);
+    }
+  }
+  
+  // Notify on deadline changes
+  else if (input.due_date && oldTask?.due_date !== input.due_date && data.assigned_to && data.assigned_to.length > 0) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const notifyIds = data.assigned_to.filter((id: string) => id !== user?.id);
+      
+      if (notifyIds.length > 0) {
+        const { data: changerProfile } = await supabase.from('profiles').select('username').eq('id', user?.id || '').single();
+        const changerName = changerProfile?.username || 'Someone';
+        
+        const formattedDate = new Date(input.due_date).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
+        const notifications = await createNotificationsForUsers(notifyIds, {
+          type: 'task_deadline',
+          title: `Task deadline changed`,
+          message: `${changerName} changed deadline of "${data.title}" to ${formattedDate}`,
+          link: `/boards/${data.board_id}?task=${data.id}`,
+          priority: 'normal',
+          task_id: data.id,
+          board_id: data.board_id,
+        });
+
+        const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', notifyIds);
+        const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+
+        if (usersWithDiscord.length > 0 && notifications.length > 0) {
+          await sendDiscordNotification({
+            notificationId: notifications[0].id,
+            type: 'task_deadline',
+            title: `Deadline changed`,
+            message: `${changerName} changed deadline: ${data.title}`,
+            link: `/boards/${data.board_id}?task=${data.id}`,
+            priority: 'normal',
+            users: usersWithDiscord,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send deadline change notifications:', error);
     }
   }
 

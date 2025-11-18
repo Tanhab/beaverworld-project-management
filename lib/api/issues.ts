@@ -245,10 +245,14 @@ export async function createIssue(
 
     // Create notifications for assignees
     try {
+      // Get current user profile for username
+      const { data: currentProfile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+      const username = currentProfile?.username || 'Someone';
+      
       const notifications = await createNotificationsForUsers(assigneeIds, {
         type: 'issue_assigned',
-        title: `Issue #${issue.issue_number} assigned to you`,
-        message: issue.title,
+        title: `Added as collaborator in Issue #${issue.issue_number}`,
+        message: `${username} assigned you to: ${issue.title}`,
         link: `/issues/${issue.issue_number}`,
         priority: issue.priority === 'urgent' || issue.priority === 'high' ? 'high' : 'normal',
         issue_id: issue.id,
@@ -288,6 +292,9 @@ export async function updateIssue(
 ): Promise<IssueWithRelations> {
   const supabase = createClient();
   
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  
   const { data, error } = await supabase
     .from('issues')
     .update({
@@ -311,10 +318,13 @@ export async function updateIssue(
       
       const statusText = updates.status === 'closed' ? 'closed' : updates.status === 'pending_approval' ? 'pending approval' : 'updated';
       
+      const { data: updaterProfile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+      const updaterName = updaterProfile?.username || 'Someone';
+      
       const notifications = await createNotificationsForUsers(notifyIds, {
         type: 'issue_updated',
-        title: `Issue #${fullIssue.issue_number} ${statusText}`,
-        message: fullIssue.title,
+        title: `Issue #${fullIssue.issue_number} status changed to "${statusText}"`,
+        message: `${updaterName} changed status of: ${fullIssue.title}`,
         link: `/issues/${fullIssue.issue_number}`,
         priority: 'normal',
         issue_id: fullIssue.id,
@@ -496,7 +506,7 @@ export async function addAssignees(
           await sendDiscordNotification({
             notificationId: notifications[0].id,
             type: 'issue_assigned',
-            title: `Issue #${issue.issue_number}`,
+            title: `Issue #${issue.issue_number} assigned`,
             message: issue.title,
             link: `/issues/${issue.issue_number}`,
             priority: issue.priority === 'urgent' || issue.priority === 'high' ? 'high' : 'normal',

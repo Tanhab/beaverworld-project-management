@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Calendar, User, Trash2, Edit2, X } from 'lucide-react';
+import { Calendar, User, Trash2, Edit2, X, CheckCircle } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -167,8 +167,12 @@ export function TaskSheet({ taskId, boardId, userId, open, onOpenChange }: TaskS
                   variant={task.is_completed ? 'default' : 'outline'}
                   size="sm"
                   onClick={handleToggleComplete}
-                  className="gap-2"
+                  className={cn(
+                    "gap-2",
+                    !task.is_completed && "bg-green-50 text-green-700 border-green-300 hover:bg-green-100 hover:text-green-800"
+                  )}
                 >
+                  <CheckCircle className="h-4 w-4" />
                   {task.is_completed ? 'Completed' : 'Mark Complete'}
                 </Button>
                 <Badge
@@ -378,11 +382,11 @@ export function TaskSheet({ taskId, boardId, userId, open, onOpenChange }: TaskS
                       Add Member
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[280px] p-0 bg-[hsl(var(--card))]" align="start">
+                  <PopoverContent className="w-[280px] p-0 bg-[hsl(var(--card))]" align="start" sideOffset={5}>
                     <div className="px-4 py-3 border-b border-[hsl(var(--border))]">
                       <h4 className="font-bold text-sm text-[hsl(var(--foreground))]">Assign Team Members</h4>
                     </div>
-                    <ScrollArea className="max-h-60">
+                    <div className="max-h-[240px] overflow-y-auto">
                       {users.map((user) => (
                         <label
                           key={user.id}
@@ -408,7 +412,7 @@ export function TaskSheet({ taskId, boardId, userId, open, onOpenChange }: TaskS
                           </span>
                         </label>
                       ))}
-                    </ScrollArea>
+                    </div>
                     <div className="px-4 py-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted))]/30">
                       <Button 
                         size="sm" 
