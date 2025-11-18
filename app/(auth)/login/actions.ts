@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { loginSchema } from "@/lib/validations/auth"
 import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 
 
 export async function loginAction(formData: FormData){
@@ -34,6 +35,8 @@ export async function loginAction(formData: FormData){
         }
     }
 
+    // Revalidate the root layout to refresh user session
+    revalidatePath("/", "layout")
     redirect("/")
 
 

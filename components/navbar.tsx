@@ -21,6 +21,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useNotifications } from "@/lib/hooks/useNotifications";
 import { useCurrentUser } from "@/lib/hooks/useUser";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 type NavLink = { label: string; href: string; active?: boolean; icon: React.ComponentType<{className?:string}> };
 
@@ -55,6 +57,27 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
     { label:"Scenario Testing", href:"/scenarios", active: currentPath==="/scenarios", icon: Grid2X2Check },
     { label:"Task Boards",    href:"/boards",    active: currentPath==="/boards",    icon: ListTodo },
   ];
+
+  const handleLogout = async () => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        toast.error("Failed to logout");
+        console.error("Logout error:", error);
+        return;
+      }
+      
+      toast.success("Logged out successfully");
+      
+      // Use window.location for hard refresh that clears everything
+      window.location.href = "/login";
+    } catch (error) {
+      toast.error("An error occurred during logout");
+      console.error("Logout error:", error);
+    }
+  };
 
   const handleMarkAllAsRead = async () => {
     try {
@@ -112,28 +135,32 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {nav.map(({label, href, icon:Icon, active}) => (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-semibold transition-colors",
-                  active
-                    ? "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"
-                    : "text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))]"
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className="h-5 w-5" />
-                {label}
-              </Link>
-            ))}
-          </nav>
+          {/* Only show nav links if user is logged in */}
+          {user && (
+            <nav className="hidden md:flex items-center gap-1">
+              {nav.map(({label, href, icon:Icon, active}) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-semibold transition-colors",
+                    active
+                      ? "bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"
+                      : "text-[hsl(var(--foreground))] hover:text-[hsl(var(--primary))]"
+                  )}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon className="h-5 w-5" />
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
+        {/* Actions - Only show if user is logged in */}
+        {user && (
+          <div className="flex items-center gap-2">
           {/* Notifications trigger */}
           <DropdownMenu open={notifOpen} onOpenChange={setNotifOpen}>
             <DropdownMenuTrigger asChild>
@@ -308,13 +335,16 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
                 <p className="text-base font-bold mt-1.5">{user?.username || "Loading..."}</p>
               </div>
 
-              <DropdownMenuItem className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] ">
+              <DropdownMenuItem 
+                onClick={() => router.push("/profile")}
+                className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))] "
+              >
                 <User className="h-5 w-5 text-[hsl(var(--primary))]" />
                 Profile Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-[hsl(var(--border))] my-0" />
               <DropdownMenuItem
-                onClick={() => router.push("/login")}
+                onClick={handleLogout}
                 className="cursor-pointer px-4 py-3 text-[15px] font-semibold gap-2 hover:bg-[hsl(var(--hover-light))] focus-visible:bg-[hsl(var(--hover-light))]"
               >
                 <LogOut className="h-5 w-5" />
@@ -323,6 +353,7 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        )}
       </div>
     </header>
   );

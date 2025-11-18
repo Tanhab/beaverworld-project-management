@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { LoginInput, loginSchema } from "@/lib/validations/auth";
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginAction } from "./actions";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +41,11 @@ export default function LoginPage() {
 
     if (result?.error) {
       console.error(result.error);
-      // TODO: create toast
+      toast.error("Login failed. Please check your credentials.");
+    } else {
+      // Login successful - hard refresh to load with session
+      toast.success("Login successful!");
+      window.location.href = "/";
     }
   };
 
