@@ -83,6 +83,54 @@ export type Database = {
           },
         ]
       }
+      email_usage_log: {
+        Row: {
+          count: number
+          date: string
+        }
+        Insert: {
+          count?: number
+          date: string
+        }
+        Update: {
+          count?: number
+          date?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          location: string | null
+          priority: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          priority: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          priority?: string
+          title?: string
+        }
+        Relationships: []
+      }
       issue_activities: {
         Row: {
           activity_type: Database["public"]["Enums"]["activity_type"]
@@ -625,6 +673,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_email_preferences: {
+        Row: {
+          assigned: boolean
+          collaborator_add: boolean
+          comment: boolean
+          deadline: boolean
+          issue_closed: boolean
+          issue_created: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned?: boolean
+          collaborator_add?: boolean
+          comment?: boolean
+          deadline?: boolean
+          issue_closed?: boolean
+          issue_created?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned?: boolean
+          collaborator_add?: boolean
+          comment?: boolean
+          deadline?: boolean
+          issue_closed?: boolean
+          issue_created?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       uvcs_events: {
         Row: {

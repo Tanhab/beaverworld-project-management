@@ -12,6 +12,13 @@ import type {
 import { Json } from '../types/database.types';
 import { createNotificationsForUsers } from './notifications';
 import { sendDiscordNotification } from '@/lib/integrations/discord';
+import {
+  sendIssueCreatedEmail,
+  sendAssignedEmail,
+  sendCommentEmail,
+  sendIssueClosedEmail,
+} from "@/lib/actions/email-notifications";
+
 
 /**
  * Get all issues with optional filtering
@@ -62,8 +69,17 @@ export async function getAllIssues(filters?: {
   }
   
   if (filters?.search) {
-    query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%,issue_number.eq.${filters.search}`);
+  const searchTerm = filters.search;
+  const isNumeric = /^\d+$/.test(searchTerm);
+  
+  if (isNumeric) {
+    // If search is numeric, search title, description, and issue_number
+    query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,issue_number.eq.${searchTerm}`);
+  } else {
+    // If search is text, only search title and description
+    query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
   }
+}
   
   if (filters?.dateFrom) {
     query = query.gte('updated_at', filters.dateFrom.toISOString());
@@ -215,10 +231,12 @@ export async function createIssue(
   assigneeIds: string[]
 ): Promise<IssueWithRelations> {
   const supabase = createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  
+
   const { data: issue, error: issueError } = await supabase
     .from('issues')
     .insert({
@@ -227,39 +245,56 @@ export async function createIssue(
     })
     .select()
     .single();
-  
+
   if (issueError) throw issueError;
-  
+
+  // Insert assignees
   if (assigneeIds.length > 0) {
-    const assignees = assigneeIds.map(userId => ({
+    const assignees = assigneeIds.map((userId) => ({
       issue_id: issue.id,
       user_id: userId,
       assigned_by: user.id,
     }));
-    
+
     const { error: assigneeError } = await supabase
       .from('issue_assignees')
       .insert(assignees);
-    
+
     if (assigneeError) throw assigneeError;
 
-    // Create notifications for assignees
+    // In-app + Discord notifications
     try {
-      // Get current user profile for username
-      const { data: currentProfile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user.id)
+        .single();
       const username = currentProfile?.username || 'Someone';
-      
+
       const notifications = await createNotificationsForUsers(assigneeIds, {
         type: 'issue_assigned',
         title: `Added as collaborator in Issue #${issue.issue_number}`,
         message: `${username} assigned you to: ${issue.title}`,
         link: `/issues/${issue.issue_number}`,
-        priority: issue.priority === 'urgent' || issue.priority === 'high' ? 'high' : 'normal',
+        priority:
+          issue.priority === 'urgent' || issue.priority === 'high'
+            ? 'high'
+            : 'normal',
         issue_id: issue.id,
       });
 
-      const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', assigneeIds);
-      const usersWithDiscord = profiles?.filter(p => p.discord_id).map(p => ({ discord_id: p.discord_id!, username: p.username })) || [];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, discord_id')
+        .in('id', assigneeIds);
+
+      const usersWithDiscord =
+        profiles
+          ?.filter((p: any) => p.discord_id)
+          .map((p: any) => ({
+            discord_id: p.discord_id as string,
+            username: p.username as string,
+          })) || [];
 
       if (usersWithDiscord.length > 0 && notifications.length > 0) {
         await sendDiscordNotification({
@@ -268,20 +303,32 @@ export async function createIssue(
           title: `Issue #${issue.issue_number} assigned`,
           message: issue.title,
           link: `/issues/${issue.issue_number}`,
-          priority: issue.priority === 'urgent' || issue.priority === 'high' ? 'high' : 'normal',
+          priority:
+            issue.priority === 'urgent' || issue.priority === 'high'
+              ? 'high'
+              : 'normal',
           users: usersWithDiscord,
         });
       }
+      
+
+      
     } catch (error) {
-      console.error('Failed to send notifications:', error);
+      console.error('Failed to send notifications (createIssue):', error);
     }
   }
-  
+   try {
+        await sendIssueCreatedEmail(issue.id);
+      } catch (error) {
+        console.error("Failed to send email notification:", error);
+      }
+
   const fullIssue = await getIssueById(issue.id);
   if (!fullIssue) throw new Error('Failed to fetch created issue');
-  
+
   return fullIssue;
 }
+
 
 /**
  * Update an issue
@@ -344,6 +391,7 @@ export async function updateIssue(
           users: usersWithDiscord,
         });
       }
+
     } catch (error) {
       console.error('Failed to send status change notifications:', error);
     }
@@ -374,36 +422,85 @@ export async function archiveIssue(issueId: string): Promise<void> {
  */
 export async function closeIssue(
   issueId: string,
-  solvedCommitNumber?: string
+  solvedCommitNumber?: string,
+  closingMessage?: string
 ): Promise<IssueWithRelations> {
   const supabase = createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  
+
   const updates: UpdateIssueInput = {
     status: 'closed',
     closed_at: new Date().toISOString(),
     closed_by: user.id,
     updated_at: new Date().toISOString(),
   };
-  
+
   if (solvedCommitNumber) {
     updates.solved_commit_number = solvedCommitNumber;
   }
-  
-  const { data, error } = await supabase
+
+  const { error } = await supabase
     .from('issues')
     .update(updates)
-    .eq('id', issueId)
-    .select()
-    .single();
-  
+    .eq('id', issueId);
+
   if (error) throw error;
-  
+
   const fullIssue = await getIssueById(issueId);
   if (!fullIssue) throw new Error('Failed to fetch closed issue');
-  
+
+  // 🔔 Send all notifications on close
+  if (fullIssue.assignees && fullIssue.assignees.length > 0) {
+    try {
+      const assigneeIds = fullIssue.assignees.map((a: any) => a.id as string);
+
+      // 1) In-app notifications
+      const notifications = await createNotificationsForUsers(assigneeIds, {
+        type: 'issue_closed',
+        title: `Issue #${fullIssue.issue_number} was closed`,
+        message: closingMessage || fullIssue.title,
+        link: `/issues/${fullIssue.issue_number}`,
+        priority: 'normal',
+        issue_id: fullIssue.id,
+      });
+
+      // 2) Discord notifications
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, discord_id')
+        .in('id', assigneeIds);
+
+      const usersWithDiscord =
+        profiles
+          ?.filter((p: any) => p.discord_id)
+          .map((p: any) => ({
+            discord_id: p.discord_id as string,
+            username: p.username as string,
+          })) || [];
+
+      if (usersWithDiscord.length > 0 && notifications.length > 0) {
+        await sendDiscordNotification({
+          notificationId: notifications[0].id,
+          type: 'issue_closed',
+          title: `Issue #${fullIssue.issue_number} closed`,
+          message: closingMessage || fullIssue.title,
+          link: `/issues/${fullIssue.issue_number}`,
+          priority: 'normal',
+          users: usersWithDiscord,
+        });
+      }
+
+      // 3) Email notifications
+      await sendIssueClosedEmail(issueId, user.id, user.email || '', closingMessage);
+    } catch (error) {
+      console.error('Failed to send notifications for closed issue:', error);
+    }
+  }
+
   return fullIssue;
 }
 
@@ -438,48 +535,53 @@ export async function reopenIssue(issueId: string): Promise<IssueWithRelations> 
  */
 export async function addAssignees(
   issueId: string,
-  userIds: string[]
+  userIds: string[],
 ): Promise<void> {
   const supabase = createClient();
-  
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
-  
+
   // Check if users exist in profiles table
-  const { data: profiles } = await supabase
+  const { data: existingProfiles, error: profilesError } = await supabase
     .from('profiles')
     .select('id')
     .in('id', userIds);
-  
-  if (!profiles || profiles.length !== userIds.length) {
-    throw new Error('One or more users not found');
+
+  if (profilesError) throw profilesError;
+  if (!existingProfiles || existingProfiles.length !== userIds.length) {
+    throw new Error('One or more assignees not found');
   }
-  
-  // Check for existing assignees to prevent duplicates
-  const { data: existingAssignees } = await supabase
+
+  // Existing assignees
+  const { data: existingAssignees, error: existingError } = await supabase
     .from('issue_assignees')
     .select('user_id')
-    .eq('issue_id', issueId)
-    .in('user_id', userIds);
-  
-  const existingUserIds = existingAssignees?.map(a => a.user_id) || [];
-  const newUserIds = userIds.filter(id => !existingUserIds.includes(id));
-  
-  // Only insert new assignees
+    .eq('issue_id', issueId);
+
+  if (existingError) throw existingError;
+
+  const existingIds =
+    existingAssignees?.map((a: any) => a.user_id as string) || [];
+  const newUserIds = userIds.filter((id) => !existingIds.includes(id));
+
+  // Insert only new ones
   if (newUserIds.length > 0) {
-    const assignees = newUserIds.map(userId => ({
+    const assignees = newUserIds.map((uid) => ({
       issue_id: issueId,
-      user_id: userId,
+      user_id: uid,
       assigned_by: user.id,
     }));
-    
-    const { error } = await supabase
+
+    const { error: insertError } = await supabase
       .from('issue_assignees')
       .insert(assignees);
-    
-    if (error) throw error;
+    if (insertError) throw insertError;
   }
-  
+
+  // Touch issue.updated_at
   await supabase
     .from('issues')
     .update({ updated_at: new Date().toISOString() })
@@ -489,36 +591,64 @@ export async function addAssignees(
   if (newUserIds.length > 0) {
     try {
       const issue = await getIssueById(issueId);
-      if (issue) {
-        const notifications = await createNotificationsForUsers(newUserIds, {
+      if (!issue) return;
+
+      const notifications = await createNotificationsForUsers(newUserIds, {
+        type: 'issue_assigned',
+        title: `Issue #${issue.issue_number} assigned to you`,
+        message: issue.title,
+        link: `/issues/${issue.issue_number}`,
+        priority:
+          issue.priority === 'urgent' || issue.priority === 'high'
+            ? 'high'
+            : 'normal',
+        issue_id: issue.id,
+      });
+
+      // Discord
+      const { data: discordProfiles } = await supabase
+        .from('profiles')
+        .select('id, username, discord_id')
+        .in('id', newUserIds);
+
+      const usersWithDiscord =
+        discordProfiles
+          ?.filter((p: any) => p.discord_id)
+          .map((p: any) => ({
+            discord_id: p.discord_id as string,
+            username: p.username as string,
+          })) || [];
+
+      if (usersWithDiscord.length > 0 && notifications.length > 0) {
+        await sendDiscordNotification({
+          notificationId: notifications[0].id,
           type: 'issue_assigned',
-          title: `Issue #${issue.issue_number} assigned to you`,
+          title: `Issue #${issue.issue_number} assigned`,
           message: issue.title,
           link: `/issues/${issue.issue_number}`,
-          priority: issue.priority === 'urgent' || issue.priority === 'high' ? 'high' : 'normal',
-          issue_id: issue.id,
+          priority:
+            issue.priority === 'urgent' || issue.priority === 'high'
+              ? 'high'
+              : 'normal',
+          users: usersWithDiscord,
         });
-
-        const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', newUserIds);
-        const usersWithDiscord = profiles?.filter(p => p.discord_id).map(p => ({ discord_id: p.discord_id!, username: p.username })) || [];
-
-        if (usersWithDiscord.length > 0 && notifications.length > 0) {
-          await sendDiscordNotification({
-            notificationId: notifications[0].id,
-            type: 'issue_assigned',
-            title: `Issue #${issue.issue_number} assigned`,
-            message: issue.title,
-            link: `/issues/${issue.issue_number}`,
-            priority: issue.priority === 'urgent' || issue.priority === 'high' ? 'high' : 'normal',
-            users: usersWithDiscord,
-          });
-        }
       }
+
     } catch (error) {
-      console.error('Failed to send notifications:', error);
+      console.error(
+        'Failed to send notifications for new assignees (issue):',
+        error,
+      );
     }
+    try {
+        await sendAssignedEmail(issueId, newUserIds);
+      } catch (error) {
+        console.error("Failed to send email notification:", error);
+      }
+
   }
 }
+
 
 /**
  * Remove assignees from an issue
@@ -575,29 +705,51 @@ export async function addIssueActivity(
     .eq('id', issueId);
   
   // Notify on comments
+    // Notify on comments
   if (activityType === 'comment') {
     try {
       const issue = await getIssueById(issueId);
       if (issue) {
-        const assigneeIds = issue.assignees?.map((a: any) => a.id) || [].filter((id: string) => id !== user.id);
-        
+        // Filter out the commenter themself
+        const assigneeIds = (
+          issue.assignees?.map((a: any) => a.id as string) || []
+        ).filter((id: string) => id !== user.id);
+
         if (assigneeIds.length > 0) {
-          const commentText = typeof content === 'object' && content !== null && 'text' in content 
-            ? String(content.text) 
-            : '';
-          const preview = commentText.substring(0, 100) + (commentText.length > 100 ? '...' : '');
+          const commentText =
+            typeof content === 'object' &&
+            content !== null &&
+            'text' in content
+              ? String((content as any).text)
+              : '';
+          const preview =
+            commentText.substring(0, 100) +
+            (commentText.length > 100 ? '...' : '');
 
-          const notifications = await createNotificationsForUsers(assigneeIds, {
-            type: 'issue_commented',
-            title: `New comment on #${issue.issue_number}`,
-            message: preview || issue.title,
-            link: `/issues/${issue.issue_number}`,
-            priority: 'normal',
-            issue_id: issue.id,
-          });
+          const notifications = await createNotificationsForUsers(
+            assigneeIds,
+            {
+              type: 'issue_commented',
+              title: `New comment on #${issue.issue_number}`,
+              message: preview || issue.title,
+              link: `/issues/${issue.issue_number}`,
+              priority: 'normal',
+              issue_id: issue.id,
+            },
+          );
 
-          const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', assigneeIds);
-          const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+          const { data: discordProfiles } = await supabase
+            .from('profiles')
+            .select('id, username, discord_id')
+            .in('id', assigneeIds);
+
+          const usersWithDiscord =
+            discordProfiles
+              ?.filter((p: any) => p.discord_id)
+              .map((p: any) => ({
+                discord_id: p.discord_id as string,
+                username: p.username as string,
+              })) || [];
 
           if (usersWithDiscord.length > 0 && notifications.length > 0) {
             await sendDiscordNotification({
@@ -610,12 +762,22 @@ export async function addIssueActivity(
               users: usersWithDiscord,
             });
           }
-        }
+          try {
+            await sendCommentEmail(issueId, preview);
+          } catch (error) {
+            console.error("Failed to send email notification:", error);
+          }
+        } 
       }
     } catch (error) {
-      console.error('Failed to send comment notifications:', error);
+      console.error(
+        'Failed to send comment notifications (issue + email):',
+        error,
+      );
     }
+    
   }
+
 
   return data;
 }

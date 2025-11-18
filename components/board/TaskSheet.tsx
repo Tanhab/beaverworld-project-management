@@ -386,7 +386,7 @@ export function TaskSheet({ taskId, boardId, userId, open, onOpenChange }: TaskS
                     <div className="px-4 py-3 border-b border-[hsl(var(--border))]">
                       <h4 className="font-bold text-sm text-[hsl(var(--foreground))]">Assign Team Members</h4>
                     </div>
-                    <div className="max-h-[240px] overflow-y-auto">
+                    <div className="max-h-60 overflow-y-auto">
                       {users.map((user) => (
                         <label
                           key={user.id}

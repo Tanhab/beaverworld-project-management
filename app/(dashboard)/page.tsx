@@ -1,59 +1,29 @@
 "use client";
 
-import React, { useState } from "react";
 import {
   Bug,
   Grid2X2Check,
   ListChecks,
-  Clock,
-  TrendingUp,
-  GitBranch,
-  Users,
-  CheckCircle2,
-  AlertCircle,
-  MessageSquare,
-  FileText,
-  Calendar,
-  Plus,
-  MapPin,
   ArrowRight,
-  Flag,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import RecentActivityFeed from "@/components/RecentActivityFeed";
-import VersionTrackerCard from '@/components/dashboard/VersionTrackerCard';
+import VersionTrackerCard from "@/components/dashboard/VersionTrackerCard";
+import UpcomingEventsCard from "@/components/dashboard/UpcomingEventsCard";
+import { useIssues, useMyIssues } from "@/lib/hooks/useIssues";
 
 
 // Dummy Data
-const stats = [
+// Base config for dashboard stat cards (styling + links)
+const baseStats = [
   {
+    key: "totalIssues" as const,
     title: "Total Issues",
-    value: 47,
-    change: "+5 this week",
     icon: Bug,
     color: "text-[hsl(var(--primary))]",
     bgColor: "bg-[hsl(var(--primary))]/10",
@@ -61,19 +31,17 @@ const stats = [
     linkText: "View all issues",
   },
   {
+    key: "myIssues" as const,
     title: "Your Pending Issues",
-    value: 8,
-    change: "3 high priority",
-    icon: AlertCircle,
+    icon: ListChecks,
     color: "text-orange-600",
     bgColor: "bg-orange-100",
     link: "/issues?filter=assigned-to-me&status=open",
     linkText: "View your issues",
   },
   {
+    key: "totalScenarios" as const,
     title: "Total Scenarios",
-    value: 12,
-    change: "4 in progress",
     icon: Grid2X2Check,
     color: "text-blue-600",
     bgColor: "bg-blue-100",
@@ -81,9 +49,8 @@ const stats = [
     linkText: "View all scenarios",
   },
   {
+    key: "myScenarios" as const,
     title: "Your Pending Scenarios",
-    value: 5,
-    change: "2 urgent",
     icon: ListChecks,
     color: "text-purple-600",
     bgColor: "bg-purple-100",
@@ -91,6 +58,7 @@ const stats = [
     linkText: "View your scenarios",
   },
 ];
+
 
 
 
@@ -227,20 +195,66 @@ const weeklyIssues = [
 */
 
 export default function DashboardPage() {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const { data: allIssues } = useIssues();
+  const { data: myIssues } = useMyIssues();
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "text-red-600 bg-red-50 border-red-200";
-      case "medium":
-        return "text-orange-600 bg-orange-50 border-orange-200";
-      case "low":
-        return "text-blue-600 bg-blue-50 border-blue-200";
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(now.getDate() - 7);
+
+  const totalIssues = allIssues?.length ?? 0;
+
+  const issuesThisWeek =
+    allIssues?.filter((issue: any) => {
+      if (!issue.created_at) return false;
+      const created = new Date(issue.created_at);
+      return created >= weekAgo;
+    }).length ?? 0;
+
+  const myPendingIssues =
+    myIssues?.filter(
+      (issue: any) =>
+        issue.status !== "closed" && !issue.is_archived,
+    ) ?? [];
+
+  const myHighOrUrgent =
+    myPendingIssues.filter(
+      (issue: any) =>
+        issue.priority === "high" || issue.priority === "urgent",
+    ).length ?? 0;
+
+  const stats = baseStats.map((stat) => {
+    switch (stat.key) {
+      case "totalIssues":
+        return {
+          ...stat,
+          value: totalIssues,
+          change: `+${issuesThisWeek} this week`,
+        };
+      case "myIssues":
+        return {
+          ...stat,
+          value: myPendingIssues.length,
+          change: `${myHighOrUrgent} high / urgent`,
+        };
+      case "totalScenarios":
+        // still dummy
+        return {
+          ...stat,
+          value: 12,
+          change: "4 in progress",
+        };
+      case "myScenarios":
+        // still dummy
+        return {
+          ...stat,
+          value: 5,
+          change: "2 urgent",
+        };
       default:
-        return "text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted))]";
+        return stat;
     }
-  };
+  });
 
   return (
     <div className="min-h-screen bg-[hsl(var(--background))] p-6">
@@ -251,15 +265,14 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-[hsl(var(--muted-foreground))] font-medium text-base">
-            Welcome back! Here's what's happening with our projects.
+            Welcome back! Here&apos;s what&apos;s happening with our projects.
           </p>
         </div>
 
         {/* Top Section: Stats + Upcoming Events */}
         <div className="grid gap-6 lg:grid-cols-5 md:grid-cols-4 sm:grid-cols-2">
-          {/* Stats Grid - 2 columns on large screens */}
+          {/* Stats Grid */}
           <div className="lg:col-span-3 md:col-span-3 sm:col-span-2 grid gap-6 md:grid-cols-2 sm:grid-cols-2">
-
             {stats.map((stat) => (
               <Card
                 key={stat.title}
@@ -275,15 +288,17 @@ export default function DashboardPage() {
                         <p className="text-4xl font-bold text-[hsl(var(--foreground))]">
                           {stat.value}
                         </p>
-                        <p className="text-base font-medium text-[hsl(var(--muted-foreground))]">
-                          {stat.change}
-                        </p>
+                        {stat.change && (
+                          <p className="text-base font-medium text-[hsl(var(--muted-foreground))]">
+                            {stat.change}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div
                       className={cn(
                         "flex h-14 w-14 items-center justify-center rounded-xl shrink-0",
-                        stat.bgColor
+                        stat.bgColor,
                       )}
                     >
                       <stat.icon className={cn("h-7 w-7", stat.color)} />
@@ -291,7 +306,7 @@ export default function DashboardPage() {
                   </div>
                   <Link
                     href={stat.link}
-                    className="inline-flex items-center gap-1.5 text-base font-semibold text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80 transition-colors group"
+                    className="inline-flex items-center gap-1.5 text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80 transition-colors group"
                   >
                     {stat.linkText}
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
@@ -301,217 +316,25 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Upcoming Events - 1 column on large screens */}
-          <Card className="lg:col-span-2 md:col-span-1 sm:col-span-2 border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-            <CardHeader className="border-b border-[hsl(var(--border))] pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-[hsl(var(--primary))]" />
-                  Upcoming Events
-                </CardTitle>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Event
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[500px] bg-[hsl(var(--card))] border-[hsl(var(--border))]">
-                    <DialogHeader>
-                      <DialogTitle className="text-xl font-bold">
-                        Add New Event
-                      </DialogTitle>
-                      <DialogDescription className="text-[hsl(var(--muted-foreground))]">
-                        Create a new event for your team's calendar.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form className="space-y-4 mt-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="event-title" className="font-semibold">
-                          Event Title
-                        </Label>
-                        <Input
-                          id="event-title"
-                          placeholder="Enter event title"
-                          className="border-[hsl(var(--border))]"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="event-description"
-                          className="font-semibold"
-                        >
-                          Description
-                        </Label>
-                        <Textarea
-                          id="event-description"
-                          placeholder="Enter event description"
-                          rows={3}
-                          className="border-[hsl(var(--border))] resize-none"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="event-date" className="font-semibold">
-                            Date
-                          </Label>
-                          <Input
-                            id="event-date"
-                            type="date"
-                            className="border-[hsl(var(--border))]"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor="event-priority"
-                            className="font-semibold"
-                          >
-                            Priority
-                          </Label>
-                          <Select>
-                            <SelectTrigger className="border-[hsl(var(--border))]">
-                              <SelectValue placeholder="Select priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="event-location"
-                          className="font-semibold"
-                        >
-                          Location
-                        </Label>
-                        <Input
-                          id="event-location"
-                          placeholder="Enter location"
-                          className="border-[hsl(var(--border))]"
-                        />
-                      </div>
-                      <div className="flex justify-end gap-3 pt-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setDialogOpen(false)}
-                          className="border-[hsl(var(--border))]"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-                        >
-                          Create Event
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[420px]">
-                <div className="divide-y divide-[hsl(var(--border))]">
-                  {upcomingEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="p-4 hover:bg-[hsl(var(--hover-light))] transition-colors cursor-pointer"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <h4 className="font-semibold text-[hsl(var(--foreground))] line-clamp-1">
-                            {event.title}
-                          </h4>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs font-semibold shrink-0",
-                              getPriorityColor(event.priority)
-                            )}
-                          >
-                            {event.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-[hsl(var(--muted-foreground))] line-clamp-2">
-                          {event.description}
-                        </p>
-                        <div className="flex flex-col gap-2">
-                          <div className="flex items-center gap-2 text-xs">
-                            <Calendar className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))]" />
-                            <span className="font-medium text-[hsl(var(--foreground))]">
-                              {event.date}
-                            </span>
-                            <span className="text-[hsl(var(--muted-foreground))]">
-                              • {event.daysLeft} days left
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <MapPin className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))]" />
-                            <span className="font-medium text-[hsl(var(--muted-foreground))]">
-                              {event.location}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          {/* Upcoming Events column */}
+          <UpcomingEventsCard className="lg:col-span-2 md:col-span-1 sm:col-span-2" />
         </div>
 
-        {/* Main Content Grid */}
+        {/* Rest of your dashboard (recent activity, version tracker, etc.) stays the same */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Recent Activity */}
-          <RecentActivityFeed 
+          <RecentActivityFeed
             daysBack={30}
             limit={50}
             showLoadMore={true}
             className="lg:col-span-2"
           />
-
-          {/* Version Tracker */}
           <VersionTrackerCard />
         </div>
 
-        {/* Commented out charts for later use */}
-        {/*
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card className="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-            <CardHeader className="border-b border-[hsl(var(--border))] pb-4">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-[hsl(var(--primary))]" />
-                Issue Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              // Chart content here
-            </CardContent>
-          </Card>
-
-          <Card className="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-            <CardHeader className="border-b border-[hsl(var(--border))] pb-4">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-[hsl(var(--primary))]" />
-                Weekly Activity
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              // Chart content here
-            </CardContent>
-          </Card>
-        </div>
-        */}
+        {/* existing commented-out charts etc. */}
       </div>
     </div>
   );
 }
+
+

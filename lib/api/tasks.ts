@@ -15,6 +15,7 @@ import type {
 const supabase = createClient();
 import { createNotificationsForUsers } from './notifications';
 import { sendDiscordNotification } from '@/lib/integrations/discord';
+import { sendTaskAssignedEmail, sendTaskCreatedEmail } from '../actions/email-notifications';
 
 /**
  * Fetch all tasks for a column
@@ -66,7 +67,7 @@ export async function getTask(taskId: string): Promise<TaskWithDetails> {
  */
 export async function createTask(
   input: CreateTaskInput,
-  userId: string
+  userId: string,
 ): Promise<Task> {
   const { data, error } = await supabase
     .from('tasks')
@@ -89,22 +90,44 @@ export async function createTask(
   // Notify assignees
   if (data.assigned_to && data.assigned_to.length > 0) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: creatorProfile } = await supabase.from('profiles').select('username').eq('id', user?.id || '').single();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', user?.id || '')
+        .single();
       const creatorName = creatorProfile?.username || 'Someone';
-      
-      const notifications = await createNotificationsForUsers(data.assigned_to, {
-        type: 'task_assigned',
-        title: `Task assigned to you`,
-        message: `${creatorName} assigned you to: ${data.title}`,
-        link: `/boards/${data.board_id}?task=${data.id}`,
-        priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
-        task_id: data.id,
-        board_id: data.board_id,
-      });
 
-      const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', data.assigned_to);
-      const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+      const notifications = await createNotificationsForUsers(
+        data.assigned_to,
+        {
+          type: 'task_assigned',
+          title: `Task assigned to you`,
+          message: `${creatorName} assigned you to: ${data.title}`,
+          link: `/boards/${data.board_id}?task=${data.id}`,
+          priority:
+            data.priority === 'Urgent' || data.priority === 'High'
+              ? 'high'
+              : 'normal',
+          task_id: data.id,
+          board_id: data.board_id,
+        },
+      );
+
+      const { data: discordProfiles } = await supabase
+        .from('profiles')
+        .select('id, username, discord_id')
+        .in('id', data.assigned_to);
+
+      const usersWithDiscord =
+        discordProfiles
+          ?.filter((p: any) => p.discord_id)
+          .map((p: any) => ({
+            discord_id: p.discord_id as string,
+            username: p.username as string,
+          })) || [];
 
       if (usersWithDiscord.length > 0 && notifications.length > 0) {
         await sendDiscordNotification({
@@ -113,17 +136,26 @@ export async function createTask(
           title: `Task assigned`,
           message: data.title,
           link: `/boards/${data.board_id}?task=${data.id}`,
-          priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+          priority:
+            data.priority === 'Urgent' || data.priority === 'High'
+              ? 'high'
+              : 'normal',
           users: usersWithDiscord,
         });
       }
+            if (user?.email) {
+        await sendTaskCreatedEmail(data.id, user.id, user.email);  
+        }
+
     } catch (error) {
-      console.error('Failed to send notifications:', error);
+      console.error('Failed to send notifications (task create):', error);
     }
   }
+  
 
   return data;
 }
+
 
 /**
  * Update a task
@@ -259,23 +291,48 @@ export async function updateTask(
       const newAssignees = input.assigned_to.filter((id: string) => !oldAssignees.includes(id));
       const removedAssignees = oldAssignees.filter((id: string) => !input.assigned_to!.includes(id));
       
+     
       // Notify newly added assignees
       if (newAssignees.length > 0) {
-        const { data: assignerProfile } = await supabase.from('profiles').select('username').eq('id', user?.id || '').single();
-        const assignerName = assignerProfile?.username || 'Someone';
-        
-        const notifications = await createNotificationsForUsers(newAssignees, {
-          type: 'task_assigned',
-          title: `Task assigned to you`,
-          message: `${assignerName} assigned you to: ${data.title}`,
-          link: `/boards/${data.board_id}?task=${data.id}`,
-          priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
-          task_id: data.id,
-          board_id: data.board_id,
-        });
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-        const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', newAssignees);
-        const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+        const { data: assignerProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user?.id || '')
+          .single();
+        const assignerName = assignerProfile?.username || 'Someone';
+
+        const notifications = await createNotificationsForUsers(
+          newAssignees,
+          {
+            type: 'task_assigned',
+            title: `Task assigned to you`,
+            message: `${assignerName} assigned you to: ${data.title}`,
+            link: `/boards/${data.board_id}?task=${data.id}`,
+            priority:
+              data.priority === 'Urgent' || data.priority === 'High'
+                ? 'high'
+                : 'normal',
+            task_id: data.id,
+            board_id: data.board_id,
+          },
+        );
+
+        const { data: discordProfiles } = await supabase
+          .from('profiles')
+          .select('id, username, discord_id')
+          .in('id', newAssignees);
+
+        const usersWithDiscord =
+          discordProfiles
+            ?.filter((p: any) => p.discord_id)
+            .map((p: any) => ({
+              discord_id: p.discord_id as string,
+              username: p.username as string,
+            })) || [];
 
         if (usersWithDiscord.length > 0 && notifications.length > 0) {
           await sendDiscordNotification({
@@ -284,11 +341,21 @@ export async function updateTask(
             title: `Task assigned`,
             message: `${assignerName} assigned task: ${data.title}`,
             link: `/boards/${data.board_id}?task=${data.id}`,
-            priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+            priority:
+              data.priority === 'Urgent' || data.priority === 'High'
+                ? 'high'
+                : 'normal',
             users: usersWithDiscord,
           });
         }
       }
+
+      try{
+        sendTaskAssignedEmail(taskId, newAssignees)
+      }catch(error){
+         console.error("Failed to send email notification:", error);
+      }
+
     } catch (error) {
       console.error('Failed to send assignee change notifications:', error);
     }
