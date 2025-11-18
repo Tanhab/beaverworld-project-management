@@ -626,6 +626,39 @@ export type Database = {
           },
         ]
       }
+      uvcs_events: {
+        Row: {
+          author: string | null
+          branch_name: string | null
+          comment: string | null
+          created_at: string
+          event_type: string
+          id: string
+          raw_payload: Json | null
+          repo_name: string | null
+        }
+        Insert: {
+          author?: string | null
+          branch_name?: string | null
+          comment?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          raw_payload?: Json | null
+          repo_name?: string | null
+        }
+        Update: {
+          author?: string | null
+          branch_name?: string | null
+          comment?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          raw_payload?: Json | null
+          repo_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

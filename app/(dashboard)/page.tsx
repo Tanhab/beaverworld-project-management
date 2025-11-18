@@ -45,6 +45,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import RecentActivityFeed from "@/components/RecentActivityFeed";
+import VersionTrackerCard from '@/components/dashboard/VersionTrackerCard';
+
 
 // Dummy Data
 const stats = [
@@ -90,115 +92,7 @@ const stats = [
   },
 ];
 
-const recentActivity = [
-  {
-    id: 1,
-    user: "Sarah Chen",
-    initials: "SC",
-    action: "created issue",
-    target: "Login button not responsive",
-    issueId: "#156",
-    time: "5m ago",
-    type: "issue_created",
-    icon: Bug,
-  },
-  {
-    id: 2,
-    user: "Mike Johnson",
-    initials: "MJ",
-    action: "completed scenario",
-    target: "Tutorial Testing",
-    time: "12m ago",
-    type: "scenario_completed",
-    icon: CheckCircle2,
-  },
-  {
-    id: 3,
-    user: "Alex Kumar",
-    initials: "AK",
-    action: "commented on",
-    target: "Character animation glitch",
-    issueId: "#143",
-    time: "28m ago",
-    type: "comment",
-    icon: MessageSquare,
-  },
-  {
-    id: 4,
-    user: "Emily Davis",
-    initials: "ED",
-    action: "closed issue",
-    target: "UI scaling problem",
-    issueId: "#152",
-    time: "1h ago",
-    type: "issue_closed",
-    icon: CheckCircle2,
-  },
-  {
-    id: 5,
-    user: "John Doe",
-    initials: "JD",
-    action: "assigned",
-    target: "Sound effects not playing",
-    issueId: "#154",
-    time: "2h ago",
-    type: "assignment",
-    icon: Users,
-  },
-  {
-    id: 6,
-    user: "Lisa Park",
-    initials: "LP",
-    action: "created scenario",
-    target: "Combat System Test",
-    time: "3h ago",
-    type: "scenario_created",
-    icon: Grid2X2Check,
-  },
-  {
-    id: 7,
-    user: "Tom Wilson",
-    initials: "TW",
-    action: "updated task",
-    target: "Implement save system",
-    time: "4h ago",
-    type: "task_updated",
-    icon: FileText,
-  },
-  {
-    id: 8,
-    user: "Sarah Chen",
-    initials: "SC",
-    action: "reopened issue",
-    target: "Memory leak in menu",
-    issueId: "#148",
-    time: "5h ago",
-    type: "issue_reopened",
-    icon: AlertCircle,
-  },
-  {
-    id: 9,
-    user: "Mike Johnson",
-    initials: "MJ",
-    action: "commented on",
-    target: "Performance optimization",
-    issueId: "#140",
-    time: "6h ago",
-    type: "comment",
-    icon: MessageSquare,
-  },
-  {
-    id: 10,
-    user: "Alex Kumar",
-    initials: "AK",
-    action: "closed issue",
-    target: "Loading screen freeze",
-    issueId: "#139",
-    time: "7h ago",
-    type: "issue_closed",
-    icon: CheckCircle2,
-  },
-];
+
 
 const versionHistory = [
   {
@@ -586,66 +480,7 @@ export default function DashboardPage() {
           />
 
           {/* Version Tracker */}
-          <Card className="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-            <CardHeader className="border-b border-[hsl(var(--border))] pb-4">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <GitBranch className="h-5 w-5 text-[hsl(var(--primary))]" />
-                Version Tracker
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[500px]">
-                <div className="divide-y divide-[hsl(var(--border))]">
-                  {versionHistory.map((version) => (
-                    <div
-                      key={version.version}
-                      className="p-4 hover:bg-[hsl(var(--hover-light))] transition-colors"
-                    >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="font-mono text-xs border-[hsl(var(--primary))] text-[hsl(var(--primary))]"
-                            >
-                              {version.version}
-                            </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="text-xs bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"
-                            >
-                              {version.branch}
-                            </Badge>
-                          </div>
-                          <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                            {version.time}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-[hsl(var(--foreground))] line-clamp-2">
-                          {version.message}
-                        </p>
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6 border border-[hsl(var(--border))]">
-                              <AvatarFallback className="bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] font-semibold text-[10px]">
-                                {version.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                              {version.author}
-                            </span>
-                          </div>
-                          <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                            • {version.commits} commits
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <VersionTrackerCard />
         </div>
 
         {/* Commented out charts for later use */}
