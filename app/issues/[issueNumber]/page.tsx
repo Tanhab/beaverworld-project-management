@@ -699,6 +699,7 @@ export default function IssueDetailPage() {
       {/* Back to Open Dialog */}
       <BackToOpenDialog
         open={backToOpenDialogOpen}
+        currentDescription={issue.description || ""}
         onOpenChange={setBackToOpenDialogOpen}
         issueId={issue.id}
         issueNumber={issue.issue_number}

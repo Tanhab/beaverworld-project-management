@@ -13,6 +13,8 @@ import type {
 } from '@/lib/types/database';
 
 const supabase = createClient();
+import { createNotificationsForUsers } from './notifications';
+import { sendDiscordNotification } from '@/lib/integrations/discord';
 
 /**
  * Fetch all tasks for a column
@@ -84,6 +86,38 @@ export async function createTask(
     title: data.title,
   });
 
+  // Notify assignees
+  if (data.assigned_to && data.assigned_to.length > 0) {
+    try {
+      const notifications = await createNotificationsForUsers(data.assigned_to, {
+        type: 'task_assigned',
+        title: `Task assigned to you`,
+        message: data.title,
+        link: `/boards/${data.board_id}?task=${data.id}`,
+        priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+        task_id: data.id,
+        board_id: data.board_id,
+      });
+
+      const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', data.assigned_to);
+      const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+
+      if (usersWithDiscord.length > 0 && notifications.length > 0) {
+        await sendDiscordNotification({
+          notificationId: notifications[0].id,
+          type: 'task_assigned',
+          title: `Task assigned`,
+          message: data.title,
+          link: `/boards/${data.board_id}?task=${data.id}`,
+          priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+          users: usersWithDiscord,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send notifications:', error);
+    }
+  }
+
   return data;
 }
 
@@ -136,6 +170,78 @@ export async function updateTask(
     await logTaskActivity(taskId, userId, 'updated', {
       fields: Object.keys(input),
     });
+  }
+
+  // Notify on task moved
+  if (oldTask && input.column_id && oldTask.column_id !== input.column_id && data.assigned_to && data.assigned_to.length > 0) {
+    try {
+      const { data: oldColumn } = await supabase.from('task_columns').select('title').eq('id', oldTask.column_id).single();
+      const { data: newColumn } = await supabase.from('task_columns').select('title').eq('id', input.column_id).single();
+
+      const notifications = await createNotificationsForUsers(data.assigned_to, {
+        type: 'task_moved',
+        title: `Task moved`,
+        message: `${data.title} moved from ${oldColumn?.title || 'Unknown'} to ${newColumn?.title || 'Unknown'}`,
+        link: `/boards/${data.board_id}?task=${data.id}`,
+        priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+        task_id: data.id,
+        board_id: data.board_id,
+      });
+
+      const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', data.assigned_to);
+      const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+
+      if (usersWithDiscord.length > 0 && notifications.length > 0) {
+        await sendDiscordNotification({
+          notificationId: notifications[0].id,
+          type: 'task_moved',
+          title: `Task moved`,
+          message: `${data.title} moved to ${newColumn?.title || 'Unknown'}`,
+          link: `/boards/${data.board_id}?task=${data.id}`,
+          priority: data.priority === 'Urgent' || data.priority === 'High' ? 'high' : 'normal',
+          users: usersWithDiscord,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send notifications:', error);
+    }
+  }
+  
+  // Notify on task completed
+  else if (input.is_completed && !oldTask?.is_completed && data.assigned_to && data.assigned_to.length > 0) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const notifyIds = data.assigned_to.filter((id: string) => id !== user?.id);
+      
+      if (notifyIds.length > 0) {
+        const notifications = await createNotificationsForUsers(notifyIds, {
+          type: 'task_moved',
+          title: `Task completed`,
+          message: data.title,
+          link: `/boards/${data.board_id}?task=${data.id}`,
+          priority: 'normal',
+          task_id: data.id,
+          board_id: data.board_id,
+        });
+
+        const { data: profiles } = await supabase.from('profiles').select('id, username, discord_id').in('id', notifyIds);
+        const usersWithDiscord = profiles?.filter((p: any) => p.discord_id).map((p: any) => ({ discord_id: p.discord_id!, username: p.username })) || [];
+
+        if (usersWithDiscord.length > 0 && notifications.length > 0) {
+          await sendDiscordNotification({
+            notificationId: notifications[0].id,
+            type: 'task_moved',
+            title: `Task completed`,
+            message: data.title,
+            link: `/boards/${data.board_id}?task=${data.id}`,
+            priority: 'normal',
+            users: usersWithDiscord,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send task completion notifications:', error);
+    }
   }
 
   return data;

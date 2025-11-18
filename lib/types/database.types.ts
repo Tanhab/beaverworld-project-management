@@ -397,42 +397,6 @@ export type Database = {
         }
         Relationships: []
       }
-      profiles_backup: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          discord_id: string | null
-          email: string | null
-          id: string | null
-          initials: string | null
-          roles: string[] | null
-          updated_at: string | null
-          username: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          discord_id?: string | null
-          email?: string | null
-          id?: string | null
-          initials?: string | null
-          roles?: string[] | null
-          updated_at?: string | null
-          username?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          discord_id?: string | null
-          email?: string | null
-          id?: string | null
-          initials?: string | null
-          roles?: string[] | null
-          updated_at?: string | null
-          username?: string | null
-        }
-        Relationships: []
-      }
       scenarios: {
         Row: {
           created_at: string

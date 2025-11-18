@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,75 +9,98 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { FileText } from "lucide-react";
+import TiptapEditor from "./TiptapEditor";
 import { useUpdateIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
 
-interface BackToOpenDialogProps {
+interface EditDescriptionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   issueId: string;
   issueNumber: number;
+  currentDescription: string;
 }
 
-export default function BackToOpenDialog({
+export default function EditDescriptionDialog({
   open,
   onOpenChange,
   issueId,
   issueNumber,
-}: BackToOpenDialogProps) {
+  currentDescription,
+}: EditDescriptionDialogProps) {
+  const [description, setDescription] = useState(currentDescription);
+
   const updateIssueMutation = useUpdateIssue();
   const addActivityMutation = useAddIssueActivity();
 
-  const handleConfirm = async () => {
+  // Update local state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setDescription(currentDescription);
+    }
+  }, [open, currentDescription]);
+
+  const handleSave = async () => {
+    if (!description.trim() || description === "<p></p>") {
+      return;
+    }
+
     try {
-      // Update status back to open
+      // Update the issue description
       await updateIssueMutation.mutateAsync({
         issueId,
         updates: {
-          status: "open",
+          description,
         },
       });
 
       // Create activity entry
       await addActivityMutation.mutateAsync({
         issueId,
-        activityType: "status_change",
+        activityType: "field_update",
         content: {
-          old_status: "pending_approval",
-          new_status: "open",
-          message: "moved back to open status",
+          field: "description",
+          old_value: null, // Don't show old description (too long)
+          new_value: "updated the description",
         },
       });
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to move back to open:", error);
+      console.error("Failed to update description:", error);
     }
+  };
+
+  const handleCancel = () => {
+    setDescription(currentDescription);
+    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] bg-[hsl(var(--card))] border-[hsl(var(--border))] p-0">
+      <DialogContent className="sm:max-w-[900px] h-[min(90vh,calc(100dvh-2rem))] bg-[hsl(var(--card))] border-[hsl(var(--border))] p-0 flex flex-col overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-[hsl(var(--border))]">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-              <AlertCircle className="h-6 w-6 text-orange-600" />
+            <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+              <FileText className="h-6 w-6 text-purple-600" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-bold">Back to Open</DialogTitle>
+              <DialogTitle className="text-2xl font-bold">Edit Description</DialogTitle>
               <DialogDescription className="text-[hsl(var(--muted-foreground))]">
-                Move issue #{issueNumber} back to open status
+                Update the description for issue #{issueNumber}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="px-6 py-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <p className="text-sm text-orange-800 font-medium">
-              This will change the issue status from <strong>Pending Approval</strong> back to{" "}
-              <strong>Open</strong>. The issue will no longer be waiting for approval.
-            </p>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="px-6 py-4">
+            <TiptapEditor
+              content={description}
+              onChange={setDescription}
+              placeholder="Detailed description of the issue..."
+              minHeight="min-h-[300px]"
+            />
           </div>
         </div>
 
@@ -85,25 +109,18 @@ export default function BackToOpenDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             disabled={updateIssueMutation.isPending}
             className="border-[hsl(var(--border))] font-semibold"
           >
             Cancel
           </Button>
           <Button
-            onClick={handleConfirm}
-            disabled={updateIssueMutation.isPending}
-            className="bg-orange-600 text-white hover:bg-orange-700 font-semibold"
+            onClick={handleSave}
+            disabled={updateIssueMutation.isPending || !description.trim() || description === "<p></p>"}
+            className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-semibold"
           >
-            {updateIssueMutation.isPending ? (
-              "Moving..."
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4 mr-2" />
-                Back to Open
-              </>
-            )}
+            {updateIssueMutation.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </DialogContent>

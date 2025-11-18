@@ -44,6 +44,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import RecentActivityFeed from "@/components/RecentActivityFeed";
 
 // Dummy Data
 const stats = [
@@ -577,66 +578,12 @@ export default function DashboardPage() {
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Recent Activity */}
-          <Card className="lg:col-span-2 border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-            <CardHeader className="border-b border-[hsl(var(--border))] pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-[hsl(var(--primary))]" />
-                  Recent Activity
-                </CardTitle>
-                <Badge
-                  variant="secondary"
-                  className="bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))]"
-                >
-                  Live
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[500px]">
-                <div className="divide-y divide-[hsl(var(--border))]">
-                  {recentActivity.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="p-4 hover:bg-[hsl(var(--hover-light))] transition-colors"
-                    >
-                      <div className="flex items-start gap-4">
-                        <Avatar className="h-10 w-10 border-2 border-[hsl(var(--border))] shrink-0">
-                          <AvatarFallback className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] font-semibold text-sm">
-                            {activity.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 space-y-1 min-w-0">
-                          <p className="text-sm leading-relaxed">
-                            <span className="font-semibold text-[hsl(var(--foreground))]">
-                              {activity.user}
-                            </span>{" "}
-                            <span className="text-[hsl(var(--muted-foreground))]">
-                              {activity.action}
-                            </span>{" "}
-                            <span className="font-semibold text-[hsl(var(--foreground))]">
-                              {activity.target}
-                            </span>
-                            {activity.issueId && (
-                              <span className="ml-1 text-[hsl(var(--primary))] font-semibold">
-                                {activity.issueId}
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                            {activity.time}
-                          </p>
-                        </div>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--accent))] shrink-0">
-                          <activity.icon className="h-4 w-4 text-[hsl(var(--primary))]" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+          <RecentActivityFeed 
+            daysBack={30}
+            limit={50}
+            showLoadMore={true}
+            className="lg:col-span-2"
+          />
 
           {/* Version Tracker */}
           <Card className="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
