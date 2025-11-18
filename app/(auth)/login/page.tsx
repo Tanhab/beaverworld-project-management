@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { LogIn, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
 
   // react-hook-form handles ALL form state
@@ -33,21 +35,23 @@ export default function LoginPage() {
   const passwordValue = watch("password", "");
 
   const onSubmit = async (data: LoginInput) => {
-    const formData = new FormData();
-    formData.append("email", data.email);
-    formData.append("password", data.password);
+  const formData = new FormData();
+  formData.append("email", data.email);
+  formData.append("password", data.password);
 
-    const result = await loginAction(formData);
+  const result = await loginAction(formData);
 
-    if (result?.error) {
-      console.error(result.error);
-      toast.error("Login failed. Please check your credentials.");
-    } else {
-      // Login successful - hard refresh to load with session
-      toast.success("Login successful!");
-      window.location.href = "/";
-    }
-  };
+  if (result?.error) {
+    console.error(result.error);
+    toast.error("Login failed. Please check your credentials.");
+  } else {
+    // ✅ Tell React Query that auth has changed
+    await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+
+    toast.success("Login successful!");
+    router.push("/"); // or window.location.href = "/" if you absolutely want a hard reload
+  }
+};
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-[hsl(var(--background))] flex items-center justify-center px-4 py-6">
