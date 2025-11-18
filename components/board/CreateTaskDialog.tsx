@@ -265,9 +265,13 @@ export function CreateTaskDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Create Task
+            <Button 
+            type="submit" 
+            disabled={isLoading}
+            className="bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]/90"
+            >
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Create Task
             </Button>
           </div>
         </form>

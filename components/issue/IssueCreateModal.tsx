@@ -141,7 +141,7 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
                 </Label>
                 <Input
                   id="title"
-                  placeholder="Brief description of the issue"
+                  placeholder="Brief Title for the issue"
                   className="border-[hsl(var(--border))]"
                   {...register("title")}
                 />
@@ -340,7 +340,7 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
                       </Label>
                       <Input
                         id="buildVersion"
-                        placeholder="e.g., v1.2.3"
+                        placeholder="Build 1.123"
                         className="border-[hsl(var(--border))]"
                         {...register("buildVersion")}
                       />
@@ -356,7 +356,7 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
                       </Label>
                       <Input
                         id="solvedCommitNumber"
-                        placeholder="e.g., abc123"
+                        placeholder="Check-in Number from unity version control"
                         className="border-[hsl(var(--border))]"
                         {...register("solvedCommitNumber")}
                       />

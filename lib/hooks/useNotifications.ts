@@ -1,4 +1,3 @@
-// lib/hooks/useNotifications.ts
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
@@ -40,7 +39,7 @@ export function useNotifications(options: UseNotificationsOptions) {
       return getUserNotifications(userId, { limit, offset, unreadOnly });
     },
     enabled: !!userId,
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    staleTime: 30000,
   });
 
   // Query for unread count
@@ -51,20 +50,22 @@ export function useNotifications(options: UseNotificationsOptions) {
       return getUnreadCount(userId);
     },
     enabled: !!userId,
-    staleTime: 10000, // Consider data fresh for 10 seconds
-    refetchInterval: 30000, // Poll every 30 seconds as fallback
+    staleTime: 10000,
+    refetchInterval: 30000,
   });
 
   // Mutation for marking as read
   const markAsReadMutation = useMutation({
     mutationFn: markNotificationAsRead,
     onSuccess: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ 
-        queryKey: ['notifications', userId] 
+      // Refetch both queries with exact keys
+      queryClient.refetchQueries({ 
+        queryKey: ['notifications', userId, offset, limit, unreadOnly],
+        exact: true 
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ['notifications', 'unread-count', userId] 
+      queryClient.refetchQueries({ 
+        queryKey: ['notifications', 'unread-count', userId],
+        exact: true 
       });
     },
   });
@@ -76,11 +77,14 @@ export function useNotifications(options: UseNotificationsOptions) {
       return markAllNotificationsAsRead(userId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['notifications', userId] 
+      // Refetch both queries with exact keys
+      queryClient.refetchQueries({ 
+        queryKey: ['notifications', userId, offset, limit, unreadOnly],
+        exact: true 
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ['notifications', 'unread-count', userId] 
+      queryClient.refetchQueries({ 
+        queryKey: ['notifications', 'unread-count', userId],
+        exact: true 
       });
     },
   });
@@ -89,11 +93,14 @@ export function useNotifications(options: UseNotificationsOptions) {
   const deleteNotificationMutation = useMutation({
     mutationFn: deleteNotification,
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['notifications', userId] 
+      // Refetch both queries with exact keys
+      queryClient.refetchQueries({ 
+        queryKey: ['notifications', userId, offset, limit, unreadOnly],
+        exact: true 
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ['notifications', 'unread-count', userId] 
+      queryClient.refetchQueries({ 
+        queryKey: ['notifications', 'unread-count', userId],
+        exact: true 
       });
     },
   });
@@ -110,7 +117,7 @@ export function useNotifications(options: UseNotificationsOptions) {
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'notifications',
           filter: `user_id=eq.${userId}`,
@@ -118,22 +125,23 @@ export function useNotifications(options: UseNotificationsOptions) {
         (payload) => {
           console.log('Notification change received:', payload);
           
-          // Refetch notifications and count
-          queryClient.invalidateQueries({ 
-            queryKey: ['notifications', userId] 
+          // Force immediate refetch instead of just invalidating
+          queryClient.refetchQueries({ 
+            queryKey: ['notifications', userId, offset, limit, unreadOnly],
+            exact: true
           });
-          queryClient.invalidateQueries({ 
-            queryKey: ['notifications', 'unread-count', userId] 
+          queryClient.refetchQueries({ 
+            queryKey: ['notifications', 'unread-count', userId],
+            exact: true
           });
         }
       )
       .subscribe();
 
-    // Cleanup subscription on unmount
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, enableRealtime, queryClient]);
+  }, [userId, enableRealtime, queryClient, offset, limit, unreadOnly]);
 
   // Load more notifications
   const loadMore = useCallback(() => {
@@ -152,12 +160,16 @@ export function useNotifications(options: UseNotificationsOptions) {
     async (notification: Notification) => {
       // Mark as read if unread
       if (!notification.read) {
-        // Optimistically update unread count immediately
-        queryClient.setQueryData(['notifications', 'unread-count', userId], (old: number = 0) => 
-          Math.max(0, old - 1)
-        );
-        
-        await markAsReadMutation.mutateAsync(notification.id);
+        try {
+          // Mark as read first
+          await markAsReadMutation.mutateAsync(notification.id);
+          
+          // UI will be updated by onSuccess refetch automatically
+        } catch (error) {
+          console.error('Failed to mark notification as read:', error);
+          // Don't navigate if marking as read fails
+          return;
+        }
       }
 
       // Navigate to link if exists
@@ -165,7 +177,7 @@ export function useNotifications(options: UseNotificationsOptions) {
         window.location.href = notification.link;
       }
     },
-    [markAsReadMutation, queryClient, userId]
+    [markAsReadMutation]
   );
 
   return {
@@ -200,7 +212,7 @@ export function useUnreadNotificationsCount(userId: string | null) {
     },
     enabled: !!userId,
     staleTime: 10000,
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: 30000,
   });
 
   return { count, isLoading };

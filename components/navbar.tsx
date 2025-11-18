@@ -99,12 +99,17 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
     }
   };
 
-  const handleNotificationItemClick = async (
-    notification: typeof notifications[0]
-  ) => {
-    await handleNotificationClick(notification);
-    setNotifOpen(false);
-  };
+    const handleNotificationItemClick = async (
+      notification: typeof notifications[0]
+    ) => {
+      // Don't close dropdown until after navigation
+      await handleNotificationClick(notification);
+      // Only close if navigation didn't happen (no link)
+      if (!notification.link) {
+        setNotifOpen(false);
+      }
+      // If has link, it will navigate anyway, so dropdown will disappear
+    };
 
   const formatTimestamp = (timestamp: string): string => {
     const date = new Date(timestamp);
