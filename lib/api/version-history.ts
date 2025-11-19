@@ -14,19 +14,26 @@ export interface VersionEvent {
   comment: string | null;
 }
 
-export async function getVersionHistory(limit = 50): Promise<VersionEvent[]> {
-  const supabase = createClient();
+export async function getVersionHistory(
+  limit: number = 50
+): Promise<VersionEvent[]> {
+  try {
+    const supabase = createClient();
 
-  const { data, error } = await supabase
-    .from('uvcs_events')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    const { data, error } = await supabase
+      .from('uvcs_events')
+      .select('id, created_at, event_type, repo_name, branch_name, author, comment')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-  if (error) {
-    logger.error('getVersionHistory error', error);
-    throw error;
+    if (error) {
+      logger.error('getVersionHistory error', error);
+      throw error;
+    }
+
+    return (data ?? []) as VersionEvent[];
+  } catch (err) {
+    logger.error('getVersionHistory unhandled error', err);
+    throw err;
   }
-
-  return (data ?? []) as VersionEvent[];
 }

@@ -1,4 +1,4 @@
-
+// app/api/uvcs-webhook/route.ts
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 
@@ -12,56 +12,59 @@ export async function POST(req: Request) {
 
   // Simple shared-secret check
   if (process.env.UVCS_WEBHOOK_TOKEN && token !== process.env.UVCS_WEBHOOK_TOKEN) {
+    logger.warn('UVCS webhook: bad token', { token });
     return new Response('Unauthorized', { status: 401 });
   }
 
-  let payload: any;
   try {
-    payload = await req.json();
-  } catch {
-    return new Response('Invalid JSON', { status: 400 });
-  }
+    const payload = await req.json().catch(() => null);
 
-  // These keys are guesses — tweak once you see a real payload
-  const eventType =
-    payload.event ??
-    payload.eventType ??
-    payload.type ??
-    'unknown';
+    if (!payload || typeof payload !== 'object') {
+      logger.error('UVCS webhook: invalid JSON payload', { payload });
+      return new Response('Bad Request', { status: 400 });
+    }
 
-  const repoName =
-    payload.repository?.name ??
-    payload.repoName ??
-    null;
+    // These field names are defensive guesses; we also store the whole payload.
+    const eventType: string =
+      (payload as any).event_type ??
+      (payload as any).eventType ??
+      (payload as any).action ??
+      'unknown';
 
-  const branchName =
-    payload.branch?.name ??
-    payload.changeset?.branch ??
-    null;
+    const repoName: string | null =
+      (payload as any).repo_name ??
+      (payload as any).repositoryName ??
+      (payload as any).repository?.name ??
+      null;
 
-  const author =
-    payload.user?.name ??
-    payload.owner?.name ??
-    payload.author ??
-    null;
+    const branchName: string | null =
+      (payload as any).branch_name ??
+      (payload as any).branch ??
+      (payload as any).source_branch ??
+      null;
 
-  const comment =
-    payload.comment ??
-    payload.changeset?.comment ??
-    '';
+    const author: string | null =
+      (payload as any).author ??
+      (payload as any).user?.name ??
+      (payload as any).user?.username ??
+      null;
 
-  try {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from('uvcs_events')
-      .insert({
-        event_type: eventType,
-        repo_name: repoName,
-        branch_name: branchName,
-        author,
-        comment,
-        raw_payload: payload,
-      });
+    const comment: string | null =
+      (payload as any).comment ??
+      (payload as any).changeset_comment ??
+      (payload as any).message ??
+      null;
+
+    const supabase = await createClient(); 
+
+    const { error } = await supabase.from('uvcs_events').insert({
+      event_type: eventType,
+      repo_name: repoName,
+      branch_name: branchName,
+      author,
+      comment,
+      raw_payload: payload,
+    });
 
     if (error) {
       logger.error('UVCS webhook insert error', error);
@@ -73,4 +76,9 @@ export async function POST(req: Request) {
     logger.error('UVCS webhook unhandled error', err);
     return new Response('Server error', { status: 500 });
   }
+}
+
+// Optional: sanity check route
+export async function GET() {
+  return new Response('UVCS webhook is up. Use POST.', { status: 200 });
 }
