@@ -1,3 +1,6 @@
+// lib/issues/utils.ts
+// UPDATED VERSION - Replace your existing file
+
 import { AlertCircle, Clock, CheckCircle2 } from "lucide-react";
 import { IssueWithRelations } from "../types/database";
 
@@ -58,35 +61,127 @@ export const getPriorityColor = (priority: string) => {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  /**
+   * Sort issues with status priority (open/pending first, closed last)
+   * When no explicit sort is selected, defaults to status-aware sorting
+   */
   export function sortIssues(
-  issues: IssueWithRelations[],
-  sortBy: string
-): IssueWithRelations[] {
-  const issuesCopy = [...issues];
-  
-  switch (sortBy) {
-    case "updated-desc":
-      return issuesCopy.sort((a, b) => 
-        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      );
-    case "updated-asc":
-      return issuesCopy.sort((a, b) => 
-        new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
-      );
-    case "priority-high":
-      const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
-      return issuesCopy.sort((a, b) => 
-        (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99)
-      );
-    case "priority-low":
-      const reversePriorityOrder = { low: 0, medium: 1, high: 2, urgent: 3 };
-      return issuesCopy.sort((a, b) => 
-        (reversePriorityOrder[a.priority] || 99) - (reversePriorityOrder[b.priority] || 99)
-      );
-    default:
-      return issuesCopy;
+    issues: IssueWithRelations[],
+    sortBy: string,
+    hasActiveFilters: boolean = false
+  ): IssueWithRelations[] {
+    const issuesCopy = [...issues];
+    
+    // Status order: open and pending_approval first, closed last
+    const getStatusOrder = (status: string): number => {
+      switch (status) {
+        case "open":
+          return 0;
+        case "pending_approval":
+          return 1;
+        case "closed":
+          return 2;
+        default:
+          return 3;
+      }
+    };
+
+    switch (sortBy) {
+      case "updated-desc":
+        // If filters are active, just sort by updated date
+        if (hasActiveFilters) {
+          return issuesCopy.sort((a, b) => 
+            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+          );
+        }
+        // Default: Status-aware sorting, then by updated date
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+
+      case "updated-asc":
+        // If filters are active, just sort by updated date
+        if (hasActiveFilters) {
+          return issuesCopy.sort((a, b) => 
+            new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime()
+          );
+        }
+        // Default: Status-aware sorting, then by updated date ascending
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        });
+
+      case "created-desc":
+        // If filters are active, just sort by created date
+        if (hasActiveFilters) {
+          return issuesCopy.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+        }
+        // Default: Status-aware sorting, then by created date (newest first)
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+
+      case "created-asc":
+        // If filters are active, just sort by created date
+        if (hasActiveFilters) {
+          return issuesCopy.sort((a, b) => 
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        }
+        // Default: Status-aware sorting, then by created date (oldest first)
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+
+      case "priority-high":
+        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+        // If filters are active, just sort by priority
+        if (hasActiveFilters) {
+          return issuesCopy.sort((a, b) => 
+            (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99)
+          );
+        }
+        // Default: Status-aware sorting, then by priority
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+        });
+
+      case "priority-low":
+        const reversePriorityOrder = { low: 0, medium: 1, high: 2, urgent: 3 };
+        // If filters are active, just sort by priority
+        if (hasActiveFilters) {
+          return issuesCopy.sort((a, b) => 
+            (reversePriorityOrder[a.priority] || 99) - (reversePriorityOrder[b.priority] || 99)
+          );
+        }
+        // Default: Status-aware sorting, then by priority
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return (reversePriorityOrder[a.priority] || 99) - (reversePriorityOrder[b.priority] || 99);
+        });
+
+      default:
+        // Default case: Status-aware sorting, then by created date (newest first)
+        return issuesCopy.sort((a, b) => {
+          const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
+          if (statusDiff !== 0) return statusDiff;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+    }
   }
-}
 
 export const formatDeadline = (date: Date) => {
     const now = new Date();

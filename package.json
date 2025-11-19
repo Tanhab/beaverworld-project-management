@@ -46,6 +46,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "geist": "^1.5.1",
+    "import-in-the-middle": "^1.8.1",
     "lucide-react": "^0.553.0",
     "next": "16.0.1",
     "next-themes": "^0.4.6",
@@ -54,12 +55,23 @@
     "react-dom": "19.2.0",
     "react-email": "^5.0.1",
     "react-hook-form": "^7.66.0",
-    "require-in-the-middle": "^8.0.1",
+    "require-in-the-middle": "7.5.2",
     "resend": "^6.4.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.1.12"
+  },
+  "pnpm": {
+    "overrides": {
+      "require-in-the-middle": "7.5.2",
+      "import-in-the-middle": "^1.8.1"
+    },
+    "onlyBuiltDependencies": [
+      "sharp",
+      "supabase",
+      "unrs-resolver"
+    ]
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

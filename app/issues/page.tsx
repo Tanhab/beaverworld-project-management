@@ -1,3 +1,10 @@
+// app/issues/page.tsx
+// UPDATED VERSION - Key changes:
+// 1. Changed default sort to 'created-desc' (newest first, status-aware)
+// 2. Added "Created Date" sort options
+// 3. Pass hasActiveFilters to sortIssues function
+// 4. When no filters active: open/pending issues appear first, closed last
+
 'use client'
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -73,8 +80,8 @@ export default function IssuesPage() {
     const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
     const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({})
 
-    // Sort state
-    const [sortBy, setSortBy] = useState<string>('updated-desc')
+    // Sort state - CHANGED: Default to 'created-desc' (newest first, with status priority)
+    const [sortBy, setSortBy] = useState<string>('created-desc')
 
     // Fetch users for assignee filter
     const { data: allUsers = [], isLoading: usersLoading } = useUsers()
@@ -116,24 +123,45 @@ export default function IssuesPage() {
         refetch,
     } = useIssues(filters)
 
-    // using memo to sort with better cache
-    const sortedIssues = useMemo(
-        () => sortIssues(issues, sortBy),
-        [issues, sortBy],
-    )
-
+    // Check if filters are active
     const hasActiveFilters =
-        selectedStatuses.length > 0 ||
-        selectedPriorities.length > 0 ||
-        selectedAssignees.length > 0 ||
-        dateRange.from ||
-        dateRange.to
+    selectedStatuses.length > 0 ||
+    selectedPriorities.length > 0 ||
+    selectedAssignees.length > 0 ||
+    !!dateRange.from ||
+    !!dateRange.to
+
+    // UPDATED: Pass hasActiveFilters to sortIssues
+    const sortedIssues = useMemo(
+        () => sortIssues(issues, sortBy, hasActiveFilters),
+        [issues, sortBy, hasActiveFilters],
+    )
 
     const clearFilters = () => {
         setSelectedStatuses([])
         setSelectedPriorities([])
         setSelectedAssignees([])
         setDateRange({})
+    }
+
+    // Helper function to get sort label
+    const getSortLabel = (sort: string) => {
+        switch (sort) {
+            case 'created-desc':
+                return 'Newest First'
+            case 'created-asc':
+                return 'Oldest First'
+            case 'updated-desc':
+                return 'Recently Updated'
+            case 'updated-asc':
+                return 'Least Recently Updated'
+            case 'priority-high':
+                return 'High Priority First'
+            case 'priority-low':
+                return 'Low Priority First'
+            default:
+                return 'Newest First'
+        }
     }
 
     return (
@@ -173,167 +201,159 @@ export default function IssuesPage() {
                         <div className="relative flex-1">
                             <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
                             <Input
-                                placeholder="Search issues by title, description, or IS-number..."
-                                className="border-[hsl(var(--border))] pl-10"
+                                type="text"
+                                placeholder="Search issues by title, description, or ID..."
+                                className="pl-10 font-medium"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
 
-                        {/* Filter */}
+                        {/* Filter Button */}
                         <Popover open={filterOpen} onOpenChange={setFilterOpen}>
                             <PopoverTrigger asChild>
                                 <Button
                                     variant="outline"
                                     className={cn(
-                                        'relative border-[hsl(var(--border))] font-semibold',
+                                        'font-semibold',
                                         hasActiveFilters &&
-                                            'border-[hsl(var(--primary))] text-[hsl(var(--primary))]',
+                                            'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]',
                                     )}
                                 >
-                                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                                    <SlidersHorizontal className="mr-2 h-5 w-5" />
                                     Filter
                                     {hasActiveFilters && (
-                                        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary))] text-xs font-bold text-[hsl(var(--primary-foreground))]">
-                                            {selectedStatuses.length +
-                                                selectedPriorities.length +
-                                                selectedAssignees.length +
-                                                (dateRange.from || dateRange.to
-                                                    ? 1
-                                                    : 0)}
-                                        </span>
+                                        <Badge
+                                            variant="secondary"
+                                            className="ml-2 bg-[hsl(var(--primary))] text-white"
+                                        >
+                                            {[
+                                                selectedStatuses.length,
+                                                selectedPriorities.length,
+                                                selectedAssignees.length,
+                                                dateRange.from || dateRange.to ? 1 : 0,
+                                            ]
+                                                .filter((n) => n > 0)
+                                                .reduce((a, b) => a + b, 0)}
+                                        </Badge>
                                     )}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent
-                                className="w-96 border-[hsl(var(--border))] bg-[hsl(var(--card))] p-0"
+                                className="w-[400px] p-0"
                                 align="end"
                             >
-                                <div className="flex items-center justify-between border-b border-[hsl(var(--border))] p-4">
-                                    <h3 className="text-lg font-bold">
-                                        Filters
-                                    </h3>
-                                    {hasActiveFilters && (
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={clearFilters}
-                                            className="text-[hsl(var(--primary))] hover:text-[hsl(var(--primary))]/80"
-                                        >
-                                            Clear all
-                                        </Button>
-                                    )}
-                                </div>
-
-                                <ScrollArea className="max-h-[500px]">
-                                    <div className="space-y-5 p-4">
+                                <ScrollArea className="h-[500px]">
+                                    <div className="space-y-6 p-4">
                                         {/* Status Filter */}
-                                        <div className="space-y-2">
-                                            <Label className="font-semibold">
+                                        <div className="space-y-3">
+                                            <Label className="text-base font-bold">
                                                 Status
                                             </Label>
                                             <ToggleGroup
                                                 type="multiple"
+                                                className="grid grid-cols-1 gap-2"
                                                 value={selectedStatuses}
                                                 onValueChange={
                                                     setSelectedStatuses
                                                 }
-                                                className="flex-wrap justify-start gap-2"
                                             >
-                                                <ToggleGroupItem
-                                                    value="open"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-orange-200 data-[state=on]:bg-orange-50 data-[state=on]:text-orange-600"
-                                                >
-                                                    Open
-                                                </ToggleGroupItem>
-                                                <ToggleGroupItem
-                                                    value="pending_approval"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-blue-200 data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600"
-                                                >
-                                                    Pending Approval
-                                                </ToggleGroupItem>
-                                                <ToggleGroupItem
-                                                    value="closed"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-green-200 data-[state=on]:bg-green-50 data-[state=on]:text-green-600"
-                                                >
-                                                    Closed
-                                                </ToggleGroupItem>
+                                                {[
+                                                    'open',
+                                                    'pending_approval',
+                                                    'closed',
+                                                ].map((status) => {
+                                                    const config =
+                                                        getStatusConfig(status)
+                                                    return (
+                                                        <ToggleGroupItem
+                                                            key={status}
+                                                            value={status}
+                                                            className={cn(
+                                                                'justify-start font-semibold data-[state=on]:border-2',
+                                                                config.color,
+                                                                config.bg,
+                                                            )}
+                                                        >
+                                                            <config.icon className="mr-2 h-4 w-4" />
+                                                            {config.label}
+                                                        </ToggleGroupItem>
+                                                    )
+                                                })}
                                             </ToggleGroup>
                                         </div>
 
-                                        <Separator className="bg-[hsl(var(--border))]" />
+                                        <Separator />
 
                                         {/* Priority Filter */}
-                                        <div className="space-y-2">
-                                            <Label className="font-semibold">
+                                        <div className="space-y-3">
+                                            <Label className="text-base font-bold">
                                                 Priority
                                             </Label>
                                             <ToggleGroup
                                                 type="multiple"
+                                                className="grid grid-cols-2 gap-2"
                                                 value={selectedPriorities}
                                                 onValueChange={
                                                     setSelectedPriorities
                                                 }
-                                                className="flex-wrap justify-start gap-2"
                                             >
-                                                <ToggleGroupItem
-                                                    value="low"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-green-200 data-[state=on]:bg-green-50 data-[state=on]:text-green-600"
-                                                >
-                                                    Low
-                                                </ToggleGroupItem>
-                                                <ToggleGroupItem
-                                                    value="medium"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-blue-200 data-[state=on]:bg-blue-50 data-[state=on]:text-blue-600"
-                                                >
-                                                    Medium
-                                                </ToggleGroupItem>
-                                                <ToggleGroupItem
-                                                    value="high"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-orange-200 data-[state=on]:bg-orange-50 data-[state=on]:text-orange-600"
-                                                >
-                                                    High
-                                                </ToggleGroupItem>
-                                                <ToggleGroupItem
-                                                    value="urgent"
-                                                    className="border-2 px-3 py-2 font-semibold data-[state=on]:border-red-200 data-[state=on]:bg-red-50 data-[state=on]:text-red-600"
-                                                >
-                                                    Urgent
-                                                </ToggleGroupItem>
+                                                {[
+                                                    'urgent',
+                                                    'high',
+                                                    'medium',
+                                                    'low',
+                                                ].map((priority) => (
+                                                    <ToggleGroupItem
+                                                        key={priority}
+                                                        value={priority}
+                                                        className={cn(
+                                                            'justify-start font-semibold capitalize data-[state=on]:border-2',
+                                                            getPriorityColor(
+                                                                priority,
+                                                            ),
+                                                        )}
+                                                    >
+                                                        {priority}
+                                                    </ToggleGroupItem>
+                                                ))}
                                             </ToggleGroup>
                                         </div>
 
-                                        <Separator className="bg-[hsl(var(--border))]" />
+                                        <Separator />
 
-                                        {/* Assigned To Filter */}
-                                        <div className="space-y-2">
-                                            <Label className="font-semibold">
-                                                Assigned To
+                                        {/* Assignee Filter */}
+                                        <div className="space-y-3">
+                                            <Label className="text-base font-bold">
+                                                Assignee
                                             </Label>
                                             {usersLoading ? (
-                                                <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                                                <div className="text-sm text-[hsl(var(--muted-foreground))]">
                                                     Loading users...
-                                                </p>
+                                                </div>
                                             ) : (
                                                 <ToggleGroup
                                                     type="multiple"
+                                                    className="grid grid-cols-1 gap-2"
                                                     value={selectedAssignees}
                                                     onValueChange={
                                                         setSelectedAssignees
                                                     }
-                                                    className="flex-wrap justify-start gap-2"
                                                 >
                                                     {allUsers.map((user) => (
                                                         <ToggleGroupItem
                                                             key={user.id}
                                                             value={user.id}
-                                                            className="border-2 px-3 py-2 font-semibold data-[state=on]:border-[hsl(var(--primary))] data-[state=on]:bg-[hsl(var(--primary))]/10 data-[state=on]:text-[hsl(var(--primary))]"
+                                                            className="justify-start font-semibold data-[state=on]:border-2 data-[state=on]:border-[hsl(var(--primary))]"
                                                         >
-                                                            <Avatar className="mr-2 h-5 w-5">
-                                                                <AvatarFallback className="bg-[hsl(var(--muted))] text-xs">
-                                                                    {
-                                                                        user.initials
-                                                                    }
+                                                            <Avatar className="mr-2 h-6 w-6">
+                                                                <AvatarFallback className="text-xs">
+                                                                    {user.username
+                                                                        ?.substring(
+                                                                            0,
+                                                                            2,
+                                                                        )
+                                                                        .toUpperCase()}
                                                                 </AvatarFallback>
                                                             </Avatar>
                                                             {user.username}
@@ -343,169 +363,212 @@ export default function IssuesPage() {
                                             )}
                                         </div>
 
-                                        <Separator className="bg-[hsl(var(--border))]" />
+                                        <Separator />
 
                                         {/* Date Range Filter */}
-                                        <div className="space-y-2">
-                                            <Label className="font-semibold">
-                                                Updated Date Range
+                                        <div className="space-y-3">
+                                            <Label className="text-base font-bold">
+                                                Created Date Range
                                             </Label>
-                                            <div className="flex gap-2">
+                                            <div className="space-y-2">
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <Button
                                                             variant="outline"
-                                                            className={cn(
-                                                                'flex-1 justify-start border-[hsl(var(--border))] text-left font-normal',
-                                                                !dateRange.from &&
-                                                                    'text-[hsl(var(--muted-foreground))]',
-                                                            )}
+                                                            className="w-full justify-start font-normal"
                                                         >
                                                             <CalendarIcon className="mr-2 h-4 w-4" />
-                                                            {dateRange.from
-                                                                ? dateRange.from.toLocaleDateString()
-                                                                : 'From'}
+                                                            {dateRange.from ? (
+                                                                dateRange.to ? (
+                                                                    <>
+                                                                        {dateRange.from.toLocaleDateString()}{' '}
+                                                                        -{' '}
+                                                                        {dateRange.to.toLocaleDateString()}
+                                                                    </>
+                                                                ) : (
+                                                                    dateRange.from.toLocaleDateString()
+                                                                )
+                                                            ) : (
+                                                                <span>
+                                                                    Pick a date
+                                                                    range
+                                                                </span>
+                                                            )}
                                                         </Button>
                                                     </PopoverTrigger>
-                                                    <PopoverContent className="w-auto bg-[hsl(var(--card))] p-0">
+                                                    <PopoverContent
+                                                        className="w-auto p-0"
+                                                        align="start"
+                                                    >
                                                         <Calendar
-                                                            mode="single"
-                                                            selected={
-                                                                dateRange.from
-                                                            }
-                                                            onSelect={(date) =>
+                                                            mode="range"
+                                                            selected={{
+                                                                from: dateRange.from,
+                                                                to: dateRange.to,
+                                                            }}
+                                                            onSelect={(
+                                                                range,
+                                                            ) =>
                                                                 setDateRange({
-                                                                    ...dateRange,
-                                                                    from: date,
+                                                                    from: range?.from,
+                                                                    to: range?.to,
                                                                 })
                                                             }
-                                                            initialFocus
+                                                            numberOfMonths={2}
                                                         />
                                                     </PopoverContent>
                                                 </Popover>
-
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button
-                                                            variant="outline"
-                                                            className={cn(
-                                                                'flex-1 justify-start border-[hsl(var(--border))] text-left font-normal',
-                                                                !dateRange.to &&
-                                                                    'text-[hsl(var(--muted-foreground))]',
-                                                            )}
-                                                        >
-                                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                                            {dateRange.to
-                                                                ? dateRange.to.toLocaleDateString()
-                                                                : 'To'}
-                                                        </Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-auto bg-[hsl(var(--card))] p-0">
-                                                        <Calendar
-                                                            mode="single"
-                                                            selected={
-                                                                dateRange.to
-                                                            }
-                                                            onSelect={(date) =>
-                                                                setDateRange({
-                                                                    ...dateRange,
-                                                                    to: date,
-                                                                })
-                                                            }
-                                                            initialFocus
-                                                        />
-                                                    </PopoverContent>
-                                                </Popover>
+                                                {(dateRange.from ||
+                                                    dateRange.to) && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        className="w-full text-red-600 hover:text-red-700"
+                                                        onClick={() =>
+                                                            setDateRange({})
+                                                        }
+                                                    >
+                                                        Clear Date Range
+                                                    </Button>
+                                                )}
                                             </div>
-                                            {(dateRange.from ||
-                                                dateRange.to) && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        setDateRange({})
-                                                    }
-                                                    className="w-full text-xs text-[hsl(var(--muted-foreground))]"
-                                                >
-                                                    <X className="mr-1 h-3 w-3" />
-                                                    Clear date range
-                                                </Button>
-                                            )}
                                         </div>
                                     </div>
                                 </ScrollArea>
+
+                                {/* Footer */}
+                                <div className="flex items-center justify-between border-t border-[hsl(var(--border))] p-4">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={clearFilters}
+                                        disabled={!hasActiveFilters}
+                                    >
+                                        Clear All
+                                    </Button>
+                                    <Button onClick={() => setFilterOpen(false)}>
+                                        Apply Filters
+                                    </Button>
+                                </div>
                             </PopoverContent>
                         </Popover>
 
-                        {/* Sort */}
-                        <DropdownMenu
-                            open={sortOpen}
-                            onOpenChange={setSortOpen}
-                        >
+                        {/* Sort Dropdown - UPDATED with Created Date options */}
+                        <DropdownMenu open={sortOpen} onOpenChange={setSortOpen}>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="border-[hsl(var(--border))] font-semibold"
+                                    className="font-semibold"
                                 >
-                                    <ArrowUpDown className="mr-2 h-4 w-4" />
-                                    Sort
+                                    <ArrowUpDown className="mr-2 h-5 w-5" />
+                                    Sort: {getSortLabel(sortBy)}
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
-                                className="w-56 border-[hsl(var(--border))] bg-[hsl(var(--card))]"
                                 align="end"
+                                className="w-[250px] p-2"
                             >
-                                <div className="space-y-1 p-2">
+                                <div className="space-y-1">
+                                    <div className="px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))]">
+                                        BY CREATED DATE
+                                    </div>
                                     <button
-                                        onClick={() =>
+                                        className={cn(
+                                            'flex w-full items-center rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-[hsl(var(--accent))]',
+                                            sortBy === 'created-desc' &&
+                                                'bg-[hsl(var(--accent))]',
+                                        )}
+                                        onClick={() => {
+                                            setSortBy('created-desc')
+                                            setSortOpen(false)
+                                        }}
+                                    >
+                                        Newest First
+                                        {!hasActiveFilters && (
+                                            <span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">
+                                                (Open/Pending first)
+                                            </span>
+                                        )}
+                                    </button>
+                                    <button
+                                        className={cn(
+                                            'flex w-full items-center rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-[hsl(var(--accent))]',
+                                            sortBy === 'created-asc' &&
+                                                'bg-[hsl(var(--accent))]',
+                                        )}
+                                        onClick={() => {
+                                            setSortBy('created-asc')
+                                            setSortOpen(false)
+                                        }}
+                                    >
+                                        Oldest First
+                                        {!hasActiveFilters && (
+                                            <span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">
+                                                (Open/Pending first)
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    <Separator className="my-2" />
+
+                                    <div className="px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))]">
+                                        BY UPDATED DATE
+                                    </div>
+                                    <button
+                                        className={cn(
+                                            'flex w-full items-center rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-[hsl(var(--accent))]',
+                                            sortBy === 'updated-desc' &&
+                                                'bg-[hsl(var(--accent))]',
+                                        )}
+                                        onClick={() => {
                                             setSortBy('updated-desc')
-                                        }
-                                        className={cn(
-                                            'w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
-                                            sortBy === 'updated-desc'
-                                                ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                                                : 'hover:bg-[hsl(var(--hover-light))]',
-                                        )}
+                                            setSortOpen(false)
+                                        }}
                                     >
-                                        Updated: Newest First
+                                        Recently Updated
                                     </button>
                                     <button
-                                        onClick={() => setSortBy('updated-asc')}
                                         className={cn(
-                                            'w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
-                                            sortBy === 'updated-asc'
-                                                ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                                                : 'hover:bg-[hsl(var(--hover-light))]',
+                                            'flex w-full items-center rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-[hsl(var(--accent))]',
+                                            sortBy === 'updated-asc' &&
+                                                'bg-[hsl(var(--accent))]',
                                         )}
+                                        onClick={() => {
+                                            setSortBy('updated-asc')
+                                            setSortOpen(false)
+                                        }}
                                     >
-                                        Updated: Oldest First
+                                        Least Recently Updated
                                     </button>
-                                    <Separator className="my-2 bg-[hsl(var(--border))]" />
+
+                                    <Separator className="my-2" />
+
+                                    <div className="px-2 py-1.5 text-xs font-bold text-[hsl(var(--muted-foreground))]">
+                                        BY PRIORITY
+                                    </div>
                                     <button
-                                        onClick={() =>
+                                        className={cn(
+                                            'flex w-full items-center rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-[hsl(var(--accent))]',
+                                            sortBy === 'priority-high' &&
+                                                'bg-[hsl(var(--accent))]',
+                                        )}
+                                        onClick={() => {
                                             setSortBy('priority-high')
-                                        }
-                                        className={cn(
-                                            'w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
-                                            sortBy === 'priority-high'
-                                                ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                                                : 'hover:bg-[hsl(var(--hover-light))]',
-                                        )}
+                                            setSortOpen(false)
+                                        }}
                                     >
-                                        Priority: High to Low
+                                        High Priority First
                                     </button>
                                     <button
-                                        onClick={() =>
-                                            setSortBy('priority-low')
-                                        }
                                         className={cn(
-                                            'w-full rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors',
-                                            sortBy === 'priority-low'
-                                                ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                                                : 'hover:bg-[hsl(var(--hover-light))]',
+                                            'flex w-full items-center rounded-md px-2 py-2 text-left text-sm font-semibold hover:bg-[hsl(var(--accent))]',
+                                            sortBy === 'priority-low' &&
+                                                'bg-[hsl(var(--accent))]',
                                         )}
+                                        onClick={() => {
+                                            setSortBy('priority-low')
+                                            setSortOpen(false)
+                                        }}
                                     >
-                                        Priority: Low to High
+                                        Low Priority First
                                     </button>
                                 </div>
                             </DropdownMenuContent>
@@ -611,6 +674,14 @@ export default function IssuesPage() {
                                     </button>
                                 </Badge>
                             )}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={clearFilters}
+                                className="ml-auto"
+                            >
+                                Clear All
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -636,10 +707,9 @@ export default function IssuesPage() {
                     )}
 
                     {/* Loading State */}
-                    {/* // Show skeleton only on initial load */}
                     {isLoading && <IssueCardSkeleton />}
 
-                    {/* // Show inline loading indicator when refetching (changing filters) */}
+                    {/* Inline loading indicator when refetching */}
                     {!isLoading && isFetching && (
                         <div className="fixed top-4 right-4 rounded bg-blue-500 px-4 py-2 text-white">
                             Updating...
