@@ -711,30 +711,42 @@ export type Database = {
         Row: {
           author: string | null
           branch_name: string | null
+          changeset_number: string | null
           comment: string | null
           created_at: string
           event_type: string
+          has_conflicts: boolean | null
           id: string
+          merge_destination: string | null
+          merge_source: string | null
           raw_payload: Json | null
           repo_name: string | null
         }
         Insert: {
           author?: string | null
           branch_name?: string | null
+          changeset_number?: string | null
           comment?: string | null
           created_at?: string
           event_type: string
+          has_conflicts?: boolean | null
           id?: string
+          merge_destination?: string | null
+          merge_source?: string | null
           raw_payload?: Json | null
           repo_name?: string | null
         }
         Update: {
           author?: string | null
           branch_name?: string | null
+          changeset_number?: string | null
           comment?: string | null
           created_at?: string
           event_type?: string
+          has_conflicts?: boolean | null
           id?: string
+          merge_destination?: string | null
+          merge_source?: string | null
           raw_payload?: Json | null
           repo_name?: string | null
         }

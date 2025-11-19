@@ -10,7 +10,6 @@ export async function POST(req: Request) {
     logger.warn('UVCS_WEBHOOK_TOKEN not set');
   }
 
-  // Simple shared-secret check
   if (process.env.UVCS_WEBHOOK_TOKEN && token !== process.env.UVCS_WEBHOOK_TOKEN) {
     logger.warn('UVCS webhook: bad token', { token });
     return new Response('Unauthorized', { status: 401 });
@@ -24,36 +23,31 @@ export async function POST(req: Request) {
       return new Response('Bad Request', { status: 400 });
     }
 
-    // These field names are defensive guesses; we also store the whole payload.
-    const eventType: string =
-      (payload as any).event_type ??
-      (payload as any).eventType ??
-      (payload as any).action ??
-      'unknown';
+    const isMerge = !!(payload as any).PLASTIC_MERGE_TYPE;
+    const eventType = isMerge ? 'merge' : 'checkin';
+    
+    const repoName = (payload as any).PLASTIC_REPOSITORY_NAME || null;
+    const branchName = (payload as any).PLASTIC_FULL_BRANCH_NAME || 
+                       (payload as any).PLASTIC_BRANCH_NAME || null;
+    const author = (payload as any).PLASTIC_USER || null;
+    const comment = (payload as any).PLASTIC_COMMENT || null;
+    
+    let changesetNumber: string | null = null;
+    const changesetStr = (payload as any).PLASTIC_CHANGESET;
+    if (changesetStr && typeof changesetStr === 'string') {
+      const match = changesetStr.match(/cs:(\d+)/);
+      if (match) changesetNumber = match[1];
+    }
 
-    const repoName: string | null =
-      (payload as any).repo_name ??
-      (payload as any).repositoryName ??
-      (payload as any).repository?.name ??
-      null;
-
-    const branchName: string | null =
-      (payload as any).branch_name ??
-      (payload as any).branch ??
-      (payload as any).source_branch ??
-      null;
-
-    const author: string | null =
-      (payload as any).author ??
-      (payload as any).user?.name ??
-      (payload as any).user?.username ??
-      null;
-
-    const comment: string | null =
-      (payload as any).comment ??
-      (payload as any).changeset_comment ??
-      (payload as any).message ??
-      null;
+    let mergeSource: string | null = null;
+    let mergeDestination: string | null = null;
+    let hasConflicts = false;
+    
+    if (isMerge) {
+      mergeSource = (payload as any).PLASTIC_MERGE_SOURCE || null;
+      mergeDestination = (payload as any).PLASTIC_MERGE_DESTINATION || null;
+      hasConflicts = (payload as any).PLASTIC_MERGE_HAS_CONFLICTS === 'true';
+    }
 
     const supabase = await createClient(); 
 
@@ -63,6 +57,10 @@ export async function POST(req: Request) {
       branch_name: branchName,
       author,
       comment,
+      changeset_number: changesetNumber,
+      merge_source: mergeSource,
+      merge_destination: mergeDestination,
+      has_conflicts: hasConflicts,
       raw_payload: payload,
     });
 
@@ -78,7 +76,6 @@ export async function POST(req: Request) {
   }
 }
 
-// Optional: sanity check route
 export async function GET() {
   return new Response('UVCS webhook is up. Use POST.', { status: 200 });
 }

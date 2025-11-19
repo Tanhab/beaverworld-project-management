@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { GitBranch, Loader2 } from 'lucide-react';
+import { GitBranch, GitMerge, Loader2, AlertCircle } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,9 +11,9 @@ import { getVersionHistory, type VersionEvent } from '@/lib/api/version-history'
 
 function formatEventLabel(eventType: string): string {
   const lower = eventType.toLowerCase();
-  if (lower.includes('check')) return 'CHECK-IN';
-  if (lower.includes('merge')) return 'MERGE';
-  if (lower.includes('delete') || lower.includes('rm')) return 'DELETE';
+  if (lower === 'checkin') return 'CHECK-IN';
+  if (lower === 'merge') return 'MERGE';
+  if (lower === 'delete') return 'DELETE';
   return eventType.toUpperCase();
 }
 
@@ -39,25 +39,36 @@ function formatTime(iso: string): string {
 
 function initialsFromName(name: string | null): string {
   if (!name) return '??';
+  if (name.includes('@')) {
+    const username = name.split('@')[0];
+    return username.slice(0, 2).toUpperCase();
+  }
   return name
     .split(' ')
     .filter(Boolean)
     .map((p) => p[0]!.toUpperCase())
     .join('')
-    .slice(0, 3);
+    .slice(0, 2);
+}
+
+function extractBranchFromPath(path: string | null): string | null {
+  if (!path) return null;
+  const match = path.match(/br:([^@]+)/) || path.match(/^(.+)$/);
+  return match ? match[1] : path;
 }
 
 export default function VersionTrackerCard() {
   const { data, isLoading, isError, refetch, isFetching } = useQuery<VersionEvent[]>({
     queryKey: ['versionHistory'],
     queryFn: () => getVersionHistory(50),
+    refetchInterval: 30000,
   });
 
   const versions = data ?? [];
 
   return (
     <Card className="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-      <CardHeader className="border-b border-[hsl(var(--border))] pb-4 flex items-center justify-between">
+      <CardHeader className="border-b border-[hsl(var(--border))] pb-4 flex flex-row items-center justify-between">
         <CardTitle className="text-xl font-bold flex items-center gap-2">
           <GitBranch className="h-5 w-5 text-[hsl(var(--primary))]" />
           Version Tracker
@@ -68,9 +79,7 @@ export default function VersionTrackerCard() {
           onClick={() => refetch()}
           className="inline-flex items-center gap-1 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
         >
-          <Loader2
-            className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`}
-          />
+          <Loader2 className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </CardHeader>
@@ -92,67 +101,119 @@ export default function VersionTrackerCard() {
 
             {!isLoading && !isError && versions.length === 0 && (
               <div className="p-4 text-sm text-[hsl(var(--muted-foreground))]">
-                No UVCS events yet. Once you configure the webhook and do a
-                check-in / merge / delete, they will appear here.
+                No UVCS events yet.
               </div>
             )}
 
-            {versions.map((version) => (
-              <div
-                key={version.id}
-                className="p-4 hover:bg-[hsl(var(--hover-light))] transition-colors"
-              >
-                <div className="space-y-3">
-                  {/* Top row: event type / branch / time */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className="font-mono text-xs border-[hsl(var(--primary))] text-[hsl(var(--primary))]"
-                      >
-                        {formatEventLabel(version.event_type)}
-                      </Badge>
-
-                      {version.branch_name && (
+            {versions.map((version) => {
+              const isMerge = version.event_type === 'merge';
+              const sourceBranch = extractBranchFromPath(version.merge_source);
+              const destBranch = extractBranchFromPath(version.merge_destination);
+              
+              return (
+                <div
+                  key={version.id}
+                  className="p-4 hover:bg-[hsl(var(--accent))] transition-colors"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge
-                          variant="secondary"
-                          className="text-xs bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"
+                          variant="outline"
+                          className={`font-mono text-xs flex items-center gap-1 ${
+                            isMerge 
+                              ? 'bg-purple-500/10 border-purple-500/30 text-purple-700' 
+                              : 'bg-blue-500/10 border-blue-500/30 text-blue-700'
+                          }`}
                         >
-                          {version.branch_name}
+                          {isMerge && <GitMerge className="h-3 w-3" />}
+                          {formatEventLabel(version.event_type)}
                         </Badge>
-                      )}
-                    </div>
 
-                    <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                      {formatTime(version.created_at)}
-                    </span>
-                  </div>
+                        {version.changeset_number && (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs font-mono bg-slate-500/10 text-slate-700 border-slate-500/20"
+                          >
+                            cs:{version.changeset_number}
+                          </Badge>
+                        )}
 
-                  {/* Comment / message */}
-                  <p className="text-sm font-medium text-[hsl(var(--foreground))] line-clamp-2">
-                    {version.comment || '(no comment)'}
-                  </p>
+                        {version.branch_name && !isMerge && (
+                          <Badge
+                            variant="secondary"
+                            className="text-xs bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]"
+                          >
+                            {version.branch_name}
+                          </Badge>
+                        )}
 
-                  {/* Author / repo */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6 border border-[hsl(var(--border))]">
-                        <AvatarFallback className="bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] font-semibold text-[10px]">
-                          {initialsFromName(version.author)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                        {version.author ?? 'Unknown author'}
+                        {version.has_conflicts && (
+                          <Badge
+                            variant="destructive"
+                            className="text-xs flex items-center gap-1"
+                          >
+                            <AlertCircle className="h-3 w-3" />
+                            Conflicts
+                          </Badge>
+                        )}
+                      </div>
+
+                      <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium whitespace-nowrap">
+                        {formatTime(version.created_at)}
                       </span>
                     </div>
 
-                    <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
-                      {version.repo_name ?? ''}
-                    </span>
+                    {isMerge && (sourceBranch || destBranch) && (
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
+                        {sourceBranch && (
+                          <Badge
+                            variant="outline"
+                            className="bg-green-500/10 text-green-700 border-green-500/20 font-mono"
+                          >
+                            {sourceBranch}
+                          </Badge>
+                        )}
+                        {sourceBranch && destBranch && (
+                          <span className="text-[hsl(var(--muted-foreground))]">→</span>
+                        )}
+                        {destBranch && (
+                          <Badge
+                            variant="outline"
+                            className="bg-orange-500/10 text-orange-700 border-orange-500/20 font-mono"
+                          >
+                            {destBranch}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    <p className="text-sm text-[hsl(var(--foreground))] line-clamp-2">
+                      {version.comment || '(no comment)'}
+                    </p>
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar className="h-6 w-6 border border-[hsl(var(--border))] shrink-0">
+                          <AvatarFallback className="bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] font-semibold text-[10px]">
+                            {initialsFromName(version.author)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-[hsl(var(--muted-foreground))] truncate">
+                          {version.author ?? 'Unknown'}
+                        </span>
+                      </div>
+
+                      {version.repo_name && (
+                        <span className="text-xs text-[hsl(var(--muted-foreground))] font-mono whitespace-nowrap">
+                          {version.repo_name}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
       </CardContent>

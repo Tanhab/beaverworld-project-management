@@ -12,6 +12,10 @@ export interface VersionEvent {
   branch_name: string | null;
   author: string | null;
   comment: string | null;
+  changeset_number: string | null;
+  merge_source: string | null;
+  merge_destination: string | null;
+  has_conflicts: boolean | null;
 }
 
 export async function getVersionHistory(
@@ -22,7 +26,7 @@ export async function getVersionHistory(
 
     const { data, error } = await supabase
       .from('uvcs_events')
-      .select('id, created_at, event_type, repo_name, branch_name, author, comment')
+      .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -31,7 +35,7 @@ export async function getVersionHistory(
       throw error;
     }
 
-    return (data ?? []) as VersionEvent[];
+    return data ?? [];
   } catch (err) {
     logger.error('getVersionHistory unhandled error', err);
     throw err;
