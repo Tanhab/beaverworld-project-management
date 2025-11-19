@@ -11,10 +11,16 @@
  * Important: This must be at the project root, not in app/ or lib/
  */
 
-import { type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from './lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+   if (pathname.startsWith('/api/uvcs-webhook')) {
+    // Do NOT redirect, just let the request hit the route handler
+    return NextResponse.next();
+  }
+  
   return await updateSession(request);
 }
 
