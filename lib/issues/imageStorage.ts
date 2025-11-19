@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { logger } from "../logger";
 
 /**
  * Upload image to Supabase storage
@@ -29,7 +30,7 @@ export async function uploadIssueImage(
     });
 
   if (error) {
-    console.error("Upload error:", error);
+    logger.error("Upload error:", error);
     throw new Error(`Failed to upload image: ${error.message}`);
   }
 
@@ -65,7 +66,7 @@ export async function deleteIssueImage(imageUrl: string): Promise<void> {
     .remove([filePath]);
 
   if (error) {
-    console.error("Delete error:", error);
+    logger.error("Delete error:", error);
     throw new Error(`Failed to delete image: ${error.message}`);
   }
 }
@@ -108,14 +109,14 @@ export async function uploadAndSaveIssueImages(
 
       uploadedImages.push(data);
     } catch (error) {
-      console.error(`Failed to upload image ${i + 1}:`, error);
+      logger.error(`Failed to upload image ${i + 1}:`, error);
       // Clean up already uploaded images
       for (const img of uploadedImages) {
         try {
           await deleteIssueImage(img.image_url);
           await supabase.from("issue_images").delete().eq("id", img.id);
         } catch (cleanupError) {
-          console.error("Cleanup error:", cleanupError);
+          logger.error("Cleanup error:", cleanupError);
         }
       }
       throw error;
@@ -140,7 +141,7 @@ export async function deleteIssueImageComplete(
   try {
     await deleteIssueImage(imageUrl);
   } catch (error) {
-    console.error("Failed to delete from storage:", error);
+    logger.error("Failed to delete from storage:", error);
     // Continue to delete from database even if storage delete fails
   }
 

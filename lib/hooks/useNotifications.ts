@@ -11,6 +11,7 @@ import {
   deleteNotification,
 } from '@/lib/api/notifications';
 import type { Tables } from '@/lib/types/database.types';
+import { logger } from '../logger';
 
 type Notification = Tables<'notifications'>;
 
@@ -123,7 +124,7 @@ export function useNotifications(options: UseNotificationsOptions) {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          console.log('Notification change received:', payload);
+          logger.info('Notification change received:', payload);
           
           // Force immediate refetch instead of just invalidating
           queryClient.refetchQueries({ 
@@ -166,7 +167,7 @@ export function useNotifications(options: UseNotificationsOptions) {
           
           // UI will be updated by onSuccess refetch automatically
         } catch (error) {
-          console.error('Failed to mark notification as read:', error);
+          logger.error('Failed to mark notification as read:', error);
           // Don't navigate if marking as read fails
           return;
         }

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
 import { useReopenIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
+import { logger } from "@/lib/logger";
 
 interface ReopenIssueDialogProps {
   open: boolean;
@@ -43,7 +44,7 @@ export default function ReopenIssueDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to reopen issue:", error);
+      logger.error("Failed to reopen issue:", error);
     }
   };
 

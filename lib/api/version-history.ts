@@ -1,5 +1,6 @@
 // lib/api/version-history.ts
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '../logger';
 
 export type VersionEventType = 'checkin' | 'merge' | 'delete' | string;
 
@@ -23,7 +24,7 @@ export async function getVersionHistory(limit = 50): Promise<VersionEvent[]> {
     .limit(limit);
 
   if (error) {
-    console.error('getVersionHistory error', error);
+    logger.error('getVersionHistory error', error);
     throw error;
   }
 

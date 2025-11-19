@@ -5,6 +5,7 @@ import type {
     CreateUserInput,
     UpdateProfileInput,
 } from '@/lib/types/database'
+import { logger } from '../logger'
 
 /**
  * Get all users/profiles
@@ -18,7 +19,7 @@ export async function getAllUsers(): Promise<Profile[]> {
         .order('username', { ascending: true })
 
     if (error) {
-        console.error('Error fetching users:', error)
+        logger.error('Error fetching users:', error)
         throw error
     }
 
@@ -38,7 +39,7 @@ export async function getActiveUsers(): Promise<Profile[]> {
         .order('username', { ascending: true })
 
     if (error) {
-        console.error('Error fetching active users:', error)
+        logger.error('Error fetching active users:', error)
         throw error
     }
 
@@ -58,7 +59,7 @@ export async function getUserById(userId: string): Promise<Profile | null> {
         .maybeSingle()
 
     if (error) {
-        console.error('Error fetching user:', error)
+        logger.error('Error fetching user:', error)
         throw error
     }
 
@@ -79,7 +80,7 @@ export async function getUsersByIds(userIds: string[]): Promise<Profile[]> {
         .in('id', userIds)
 
     if (error) {
-        console.error('Error fetching users by IDs:', error)
+        logger.error('Error fetching users by IDs:', error)
         throw error
     }
 
@@ -120,7 +121,7 @@ export async function updateUserProfile(
         .single()
 
     if (error) {
-        console.error('Error updating profile:', error)
+        logger.error('Error updating profile:', error)
         throw error
     }
 
@@ -158,7 +159,7 @@ export async function searchUsers(query: string): Promise<Profile[]> {
         .limit(10)
 
     if (error) {
-        console.error('Error searching users:', error)
+        logger.error('Error searching users:', error)
         throw error
     }
 
@@ -178,7 +179,7 @@ export async function checkUserExists(email: string): Promise<boolean> {
         .maybeSingle()
 
     if (error) {
-        console.error('Error checking user existence:', error)
+        logger.error('Error checking user existence:', error)
         return false
     }
 

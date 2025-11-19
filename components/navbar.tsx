@@ -133,7 +133,7 @@ export default function Navbar({ currentPath="/"}:{currentPath?:string}) {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-0.5 group">
             <div className="h-11 w-11 rounded-lg flex items-center justify-center  text-[hsl(var(--primary-foreground))] transition-transform group-hover:scale-105">
-              <Image src="/beaver_icon.png" width={26} height={26} alt="BeaverBoard" />
+              <Image src="/beaver_icon.svg" width={26} height={26} alt="BeaverBoard" />
             </div>
             <span className="text-xl font-bold text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] transition-colors">
               BeaverWorldDev

@@ -15,6 +15,7 @@ import { UserPlus, Check } from "lucide-react";
 import { useUsers } from "@/lib/hooks/useUser";
 import { useAddAssignees, useRemoveAssignees, useAddIssueActivity } from "@/lib/hooks/useIssues";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 interface EditCollaboratorsDialogProps {
   open: boolean;
@@ -107,7 +108,7 @@ export default function EditCollaboratorsDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to update collaborators:", error);
+      logger.error("Failed to update collaborators:", error);
     }
   };
 

@@ -5,6 +5,7 @@ import type {
   TablesInsert,
   Tables,
 } from '@/lib/types/database.types';
+import { logger } from '../logger';
 
 type Notification = Tables<'notifications'>;
 type NotificationInsert = TablesInsert<'notifications'>;
@@ -69,7 +70,7 @@ export async function createNotification(
     .single();
 
   if (error) {
-    console.error('Error creating notification:', error);
+    logger.error('Error creating notification:', error);
     throw error;
   }
 
@@ -110,7 +111,7 @@ export async function createNotificationsForUsers(
     .select();
 
   if (error) {
-    console.error('Error creating batch notifications:', error);
+    logger.error('Error creating batch notifications:', error);
     throw error;
   }
 
@@ -150,7 +151,7 @@ export async function getUserNotifications(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error('Error fetching notifications:', error);
+    logger.error('Error fetching notifications:', error);
     throw error;
   }
 
@@ -174,7 +175,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     .eq('show_in_app', true);
 
   if (error) {
-    console.error('Error fetching unread count:', error);
+    logger.error('Error fetching unread count:', error);
     return 0;
   }
 
@@ -196,7 +197,7 @@ export async function markNotificationAsRead(
     .eq('read', false); // Only update if currently unread
 
   if (error) {
-    console.error('Error marking notification as read:', error);
+    logger.error('Error marking notification as read:', error);
     throw error;
   }
 }
@@ -214,7 +215,7 @@ export async function markAllNotificationsAsRead(userId: string): Promise<void> 
     .eq('read', false);
 
   if (error) {
-    console.error('Error marking all notifications as read:', error);
+    logger.error('Error marking all notifications as read:', error);
     throw error;
   }
 }
@@ -231,7 +232,7 @@ export async function deleteNotification(notificationId: string): Promise<void> 
     .eq('id', notificationId);
 
   if (error) {
-    console.error('Error deleting notification:', error);
+    logger.error('Error deleting notification:', error);
     throw error;
   }
 }
@@ -258,7 +259,7 @@ export async function deleteOldNotifications(
     .select('id');
 
   if (error) {
-    console.error('Error deleting old notifications:', error);
+    logger.error('Error deleting old notifications:', error);
     throw error;
   }
 
@@ -291,7 +292,7 @@ export async function getPendingDiscordNotifications(
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching pending Discord notifications:', error);
+    logger.error('Error fetching pending Discord notifications:', error);
     throw error;
   }
 
@@ -310,7 +311,7 @@ export async function markDiscordSent(notificationId: string): Promise<void> {
     .eq('id', notificationId);
 
   if (error) {
-    console.error('Error marking Discord as sent:', error);
+    logger.error('Error marking Discord as sent:', error);
     throw error;
   }
 }
@@ -340,7 +341,7 @@ export async function getPendingEmailNotifications(
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching pending email notifications:', error);
+    logger.error('Error fetching pending email notifications:', error);
     throw error;
   }
 
@@ -359,7 +360,7 @@ export async function markEmailSent(notificationId: string): Promise<void> {
     .eq('id', notificationId);
 
   if (error) {
-    console.error('Error marking email as sent:', error);
+    logger.error('Error marking email as sent:', error);
     throw error;
   }
 }

@@ -18,6 +18,7 @@ import {
   sendCommentEmail,
   sendIssueClosedEmail,
 } from "@/lib/actions/email-notifications";
+import { logger } from '../logger';
 
 
 /**
@@ -98,7 +99,7 @@ export async function getAllIssues(filters?: {
   const { data: issues, error } = await query;
   
   if (error) {
-    console.error('Error fetching issues:', error);
+    logger.error('Error fetching issues:', error);
     throw error;
   }
   if (!issues) return [];
@@ -158,7 +159,7 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
     .single();
   
   if (error) {
-    console.error('Error fetching issue:', error);
+    logger.error('Error fetching issue:', error);
     throw error;
   }
   if (!issue) return null;
@@ -314,13 +315,13 @@ export async function createIssue(
 
       
     } catch (error) {
-      console.error('Failed to send notifications (createIssue):', error);
+      logger.error('Failed to send notifications (createIssue):', error);
     }
   }
    try {
         await sendIssueCreatedEmail(issue.id);
       } catch (error) {
-        console.error("Failed to send email notification:", error);
+        logger.error("Failed to send email notification:", error);
       }
 
   const fullIssue = await getIssueById(issue.id);
@@ -393,7 +394,7 @@ export async function updateIssue(
       }
 
     } catch (error) {
-      console.error('Failed to send status change notifications:', error);
+      logger.error('Failed to send status change notifications:', error);
     }
   }
 
@@ -497,7 +498,7 @@ export async function closeIssue(
       // 3) Email notifications
       await sendIssueClosedEmail(issueId, user.id, user.email || '', closingMessage);
     } catch (error) {
-      console.error('Failed to send notifications for closed issue:', error);
+      logger.error('Failed to send notifications for closed issue:', error);
     }
   }
 
@@ -635,7 +636,7 @@ export async function addAssignees(
       }
 
     } catch (error) {
-      console.error(
+      logger.error(
         'Failed to send notifications for new assignees (issue):',
         error,
       );
@@ -643,7 +644,7 @@ export async function addAssignees(
     try {
         await sendAssignedEmail(issueId, newUserIds);
       } catch (error) {
-        console.error("Failed to send email notification:", error);
+        logger.error("Failed to send email notification:", error);
       }
 
   }
@@ -765,12 +766,12 @@ export async function addIssueActivity(
           try {
             await sendCommentEmail(issueId, preview);
           } catch (error) {
-            console.error("Failed to send email notification:", error);
+            logger.error("Failed to send email notification:", error);
           }
         } 
       }
     } catch (error) {
-      console.error(
+      logger.error(
         'Failed to send comment notifications (issue + email):',
         error,
       );

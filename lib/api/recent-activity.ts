@@ -1,6 +1,7 @@
 // lib/api/recent-activity.ts
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/lib/types/database.types';
+import { logger } from '../logger';
 
 type ActivityType = 
   | 'issue_created'
@@ -71,7 +72,7 @@ export async function getRecentActivity(
     .order('created_at', { ascending: false });
 
   if (issueError) {
-    console.error('Error fetching issue activities:', issueError);
+    logger.error('Error fetching issue activities:', issueError);
   }
 
   // Fetch task activities
@@ -94,7 +95,7 @@ export async function getRecentActivity(
     .order('created_at', { ascending: false });
 
   if (taskError) {
-    console.error('Error fetching task activities:', taskError);
+    logger.error('Error fetching task activities:', taskError);
   }
 
   // Fetch board creations (from boards table)
@@ -110,7 +111,7 @@ export async function getRecentActivity(
     .order('created_at', { ascending: false });
 
   if (boardError) {
-    console.error('Error fetching board activities:', boardError);
+    logger.error('Error fetching board activities:', boardError);
   }
 
   // Collect all user IDs
@@ -334,7 +335,7 @@ export async function getIssueActivity(
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching issue activity:', error);
+    logger.error('Error fetching issue activity:', error);
     return [];
   }
 
@@ -388,7 +389,7 @@ export async function getTaskActivity(
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching task activity:', error);
+    logger.error('Error fetching task activity:', error);
     return [];
   }
 

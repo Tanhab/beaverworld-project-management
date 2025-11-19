@@ -1,5 +1,6 @@
 import { createNotification } from '@/lib/api/notifications';
 import { sendDiscordNotification } from '@/lib/integrations/discord';
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: Request) {
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
 
     return Response.json({ success: true, notification });
   } catch (error) {
-    console.error('Test notification error:', error);
+    logger.error('Test notification error:', error);
     return Response.json({ error: String(error) }, { status: 500 });
   }
 }

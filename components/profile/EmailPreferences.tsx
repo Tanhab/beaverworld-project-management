@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export interface EmailPreferences {
   issue_created: boolean;
@@ -53,7 +54,7 @@ export default function EmailPreferences() {
         setPreferences({ ...DEFAULT_PREFERENCES, ...data });
       }
     } catch (error) {
-      console.error("Error loading email preferences:", error);
+      logger.error("Error loading email preferences:", error);
     }
   };
 
@@ -74,7 +75,7 @@ export default function EmailPreferences() {
         toast.error("Failed to save preferences");
       }
     } catch (error) {
-      console.error("Error saving email preferences:", error);
+      logger.error("Error saving email preferences:", error);
       toast.error("Failed to save preferences");
     } finally {
       setIsLoading(false);

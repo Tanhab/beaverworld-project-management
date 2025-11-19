@@ -10,6 +10,7 @@ import CollaboratorEmail from "@/lib/email-templates/CollaboratorEmail";
 import AssignedEmail from "@/lib/email-templates/AssignedEmail";
 import TaskAssignedEmail from "@/lib/email-templates/TaskAssignedEmail";
 import DeadlineEmail from "@/lib/email-templates/DeadlineEmail";
+import { logger } from "../logger";
 
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
@@ -28,7 +29,7 @@ export async function checkRateLimit() {
     .single();
 
   if (error && error.code !== "PGRST116") {
-    console.error("Rate limit fetch error", error);
+    logger.error("Rate limit fetch error", error);
     return true;
   }
 
@@ -108,7 +109,7 @@ export async function sendEmail({
 }) {
   const allowed = await checkRateLimit();
   if (!allowed) {
-    console.log("Email skipped — rate limit reached.");
+    logger.info("Email skipped — rate limit reached.");
     return;
   }
 
@@ -121,7 +122,7 @@ export async function sendEmail({
       react,
     });
   } catch (err) {
-    console.error("Resend error:", err);
+    logger.error("Resend error:", err);
   }
 }
 

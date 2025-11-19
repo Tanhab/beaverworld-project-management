@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import TiptapEditor from "./TiptapEditor";
 import { useUpdateIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
+import { logger } from "@/lib/logger";
 
 interface EditDescriptionDialogProps {
   open: boolean;
@@ -67,7 +68,7 @@ export default function EditDescriptionDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to update description:", error);
+      logger.error("Failed to update description:", error);
     }
   };
 

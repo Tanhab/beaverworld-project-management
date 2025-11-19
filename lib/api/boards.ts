@@ -7,6 +7,7 @@ import type {
   BoardFilters,
   BoardSort,
 } from '@/lib/types/database';
+import { logger } from '../logger';
 
 const supabase = createClient();
 
@@ -56,7 +57,7 @@ export async function getBoards(
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching boards:', error);
+      logger.error('Error fetching boards:', error);
       throw error;
     }
 
@@ -77,7 +78,7 @@ export async function getBoards(
 
     return boardsWithCounts;
   } catch (error) {
-    console.error('Failed to fetch boards:', error);
+    logger.error('Failed to fetch boards:', error);
     throw error;
   }
 }

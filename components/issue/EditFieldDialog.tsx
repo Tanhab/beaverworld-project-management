@@ -17,6 +17,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Edit2, Package, GitBranch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUpdateIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
+import { logger } from "@/lib/logger";
 
 type FieldType = "priority" | "category" | "deadline" | "build_version" | "solved_commit";
 
@@ -115,7 +116,7 @@ export default function EditFieldDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error(`Failed to update ${fieldType}:`, error);
+      logger.error(`Failed to update ${fieldType}:`, error);
     }
   };
 

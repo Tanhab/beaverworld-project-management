@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { CheckCircle2 } from "lucide-react";
 import TiptapEditor from "./TiptapEditor";
 import { useCloseIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
+import { logger } from "@/lib/logger";
 
 interface CloseIssueDialogProps {
   open: boolean;
@@ -59,7 +60,7 @@ export default function CloseIssueDialog({
       setClosingComment("");
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to close issue:", error);
+      logger.error("Failed to close issue:", error);
     }
   };
 

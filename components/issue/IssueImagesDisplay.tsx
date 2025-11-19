@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Download, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/logger";
 
 interface IssueImage {
   id: string;
@@ -37,7 +38,7 @@ export default function IssueImagesDisplay({
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error("Failed to download image:", error);
+      logger.error("Failed to download image:", error);
     }
   };
 

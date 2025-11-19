@@ -54,6 +54,7 @@ import ArchiveIssueDialog from "@/components/issue/ArchiveIssueDialog"
 import IssueImagesDisplay from "@/components/issue/IssueImagesDisplay";
 import { deleteIssueImageComplete } from "@/lib/issues/imageStorage";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 
 export default function IssueDetailPage() {
@@ -83,7 +84,7 @@ export default function IssueDetailPage() {
       });
       setIsEditingTitle(false);
     } catch (error) {
-      console.error("Failed to update title:", error);
+      logger.error("Failed to update title:", error);
     }
   };
 

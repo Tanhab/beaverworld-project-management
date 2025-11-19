@@ -1,5 +1,6 @@
 // lib/api/events.ts
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '../logger';
 
 export type EventPriority = 'low' | 'medium' | 'high';
 
@@ -40,7 +41,7 @@ export async function getUpcomingEvents(): Promise<Event[]> {
     .order('date', { ascending: true });
 
   if (error) {
-    console.error('getUpcomingEvents error', error);
+    logger.error('getUpcomingEvents error', error);
     throw error;
   }
 
@@ -67,7 +68,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
     .single();
 
   if (error) {
-    console.error('createEvent error', error);
+    logger.error('createEvent error', error);
     throw error;
   }
 
@@ -80,7 +81,7 @@ export async function deleteEvent(id: string): Promise<void> {
   const { error } = await supabase.from('events').delete().eq('id', id);
 
   if (error) {
-    console.error('deleteEvent error', error);
+    logger.error('deleteEvent error', error);
     throw error;
   }
 }

@@ -5,6 +5,7 @@ import { Upload, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import imageCompression from "browser-image-compression";
+import { logger } from "@/lib/logger";
 
 interface ImageFile {
   id: string;
@@ -186,7 +187,7 @@ export default function ImageUploader({
         `Compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB`
       );
     } catch (error) {
-      console.error("Compression failed:", error);
+      logger.error("Compression failed:", error);
       
       // Update status to error
       setImages(prev =>

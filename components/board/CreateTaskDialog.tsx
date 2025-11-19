@@ -33,6 +33,7 @@ import { getNextTaskPosition } from '@/lib/api/tasks';
 import { createTaskSchema, type CreateTaskFormData } from '@/lib/validations/task';
 import type { TaskPriority } from '@/lib/types/database';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -96,7 +97,7 @@ export function CreateTaskDialog({
       setSelectedAssignees([]);
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to create task:', error);
+      logger.error('Failed to create task:', error);
     } finally {
       setIsLoading(false);
     }

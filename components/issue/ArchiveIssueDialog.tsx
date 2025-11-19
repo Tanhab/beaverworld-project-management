@@ -12,6 +12,7 @@ import { Archive } from "lucide-react";
 import { useUpdateIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface ArchiveIssueDialogProps {
   open: boolean;
@@ -57,7 +58,7 @@ export default function ArchiveIssueDialog({
         router.push("/issues");
       }, 500);
     } catch (error) {
-      console.error("Failed to archive issue:", error);
+      logger.error("Failed to archive issue:", error);
       toast.error("Failed to archive issue");
     }
   };

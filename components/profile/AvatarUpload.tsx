@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import imageCompression from "browser-image-compression";
 import { useUploadAvatar, useDeleteAvatar } from "@/lib/hooks/useProfile";
-import { error } from "console";
+import { logger } from "@/lib/logger";
 
 interface AvatarUploadProps {
   open: boolean;
@@ -61,7 +61,7 @@ export default function AvatarUpload({
 
       return compressedFile;
     } catch (error) {
-      console.error("Compression error:", error);
+      logger.error("Compression error:", error);
       throw error;
     }
   };

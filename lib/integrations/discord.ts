@@ -1,6 +1,7 @@
 // lib/integrations/discord.ts
 import type { Database } from '@/lib/types/database.types';
 import { markDiscordSent } from '@/lib/api/notifications';
+import { logger } from '../logger';
 
 type NotificationType = Database['public']['Enums']['notification_type'];
 
@@ -95,7 +96,7 @@ export async function sendDiscordNotification(
   const webhookUrl = process.env.NEXT_PUBLIC_DISCORD_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
 
   if (!webhookUrl) {
-    console.warn('Discord webhook URL not configured. Skipping Discord notification.');
+    logger.warn('Discord webhook URL not configured. Skipping Discord notification.');
     return;
   }
 
@@ -103,7 +104,7 @@ export async function sendDiscordNotification(
   const usersWithDiscord = payload.users.filter(u => u.discord_id);
 
   if (usersWithDiscord.length === 0) {
-    console.log('No users with Discord IDs. Skipping Discord notification.');
+    logger.info('No users with Discord IDs. Skipping Discord notification.');
     await markDiscordSent(payload.notificationId);
     return;
   }
@@ -131,9 +132,9 @@ export async function sendDiscordNotification(
 
       // Mark as sent in database
       await markDiscordSent(payload.notificationId);
-      console.log(`Discord notification sent for: ${payload.title}`);
+      logger.info(`Discord notification sent for: ${payload.title}`);
     } catch (error) {
-      console.error('Error sending Discord notification:', error);
+      logger.error('Error sending Discord notification:', error);
       throw error;
     }
   });
@@ -273,7 +274,7 @@ export async function processPendingDiscordNotifications(): Promise<void> {
         }],
       });
     } catch (error) {
-      console.error(`Failed to send Discord notification ${notification.id}:`, error);
+      logger.error(`Failed to send Discord notification ${notification.id}:`, error);
       // Don't mark as sent if failed - will retry later
     }
   }

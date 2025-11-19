@@ -44,3 +44,5 @@ supabase/.temp
 
 zip-project.ps1
 beaverworlddev.zip
+# Sentry Config File
+.env.sentry-build-plugin

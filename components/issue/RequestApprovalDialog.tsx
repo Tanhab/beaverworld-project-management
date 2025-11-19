@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Clock, AlertCircle } from "lucide-react";
 import { useUpdateIssue, useAddIssueActivity } from "@/lib/hooks/useIssues";
+import { logger } from "@/lib/logger";
 
 interface RequestApprovalDialogProps {
   open: boolean;
@@ -50,7 +51,7 @@ export default function RequestApprovalDialog({
 
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to request approval:", error);
+      logger.error("Failed to request approval:", error);
     }
   };
 

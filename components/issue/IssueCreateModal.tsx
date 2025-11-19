@@ -27,6 +27,7 @@ import TiptapEditor from "./TiptapEditor";
 import ImageUploader from "@/components/issue/ImageUploader";
 import { uploadAndSaveIssueImages } from "@/lib/issues/imageStorage";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 
 interface CreateIssueModalProps {
@@ -97,7 +98,7 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
       try {
         await uploadAndSaveIssueImages(imageFiles, newIssue.id);
       } catch (error) {
-        console.error("Failed to upload images:", error);
+        logger.error("Failed to upload images:", error);
         toast.error("Issue created but images failed to upload");
       }
     }
@@ -108,7 +109,7 @@ export default function CreateIssueModal({ open, onOpenChange }: CreateIssueModa
       onOpenChange(false);
     } catch (error) {
       // Error is handled by the mutation hook (toast notification)
-      console.error("Failed to create issue:", error);
+      logger.error("Failed to create issue:", error);
     }
   };
 

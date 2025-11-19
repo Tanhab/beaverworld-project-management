@@ -16,6 +16,7 @@ const supabase = createClient();
 import { createNotificationsForUsers } from './notifications';
 import { sendDiscordNotification } from '@/lib/integrations/discord';
 import { sendTaskAssignedEmail, sendTaskCreatedEmail } from '../actions/email-notifications';
+import { logger } from '../logger';
 
 /**
  * Fetch all tasks for a column
@@ -148,7 +149,7 @@ export async function createTask(
         }
 
     } catch (error) {
-      console.error('Failed to send notifications (task create):', error);
+      logger.error('Failed to send notifications (task create):', error);
     }
   }
   
@@ -239,7 +240,7 @@ export async function updateTask(
         });
       }
     } catch (error) {
-      console.error('Failed to send notifications:', error);
+      logger.error('Failed to send notifications:', error);
     }
   }
   
@@ -279,7 +280,7 @@ export async function updateTask(
         }
       }
     } catch (error) {
-      console.error('Failed to send task completion notifications:', error);
+      logger.error('Failed to send task completion notifications:', error);
     }
   }
   
@@ -353,11 +354,11 @@ export async function updateTask(
       try{
         sendTaskAssignedEmail(taskId, newAssignees)
       }catch(error){
-         console.error("Failed to send email notification:", error);
+         logger.error("Failed to send email notification:", error);
       }
 
     } catch (error) {
-      console.error('Failed to send assignee change notifications:', error);
+      logger.error('Failed to send assignee change notifications:', error);
     }
   }
   
@@ -403,7 +404,7 @@ export async function updateTask(
         }
       }
     } catch (error) {
-      console.error('Failed to send deadline change notifications:', error);
+      logger.error('Failed to send deadline change notifications:', error);
     }
   }
 

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateColumn, useNextColumnPosition, useBoardWithDetails } from '@/lib/hooks/useBoards';
+import { logger } from '@/lib/logger';
 
 const columnSchema = z.object({
   title: z.string().min(1, 'Title is required').max(50),
@@ -125,7 +126,7 @@ export function CreateColumnDialog({
       reset();
       onOpenChange(false);
     } catch (error) {
-      console.error('Failed to create column:', error);
+      logger.error('Failed to create column:', error);
     } finally {
       setIsLoading(false);
     }

@@ -14,6 +14,7 @@ import { LoginInput, loginSchema } from "@/lib/validations/auth";
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginAction } from "./actions";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function LoginPage() {
   const result = await loginAction(formData);
 
   if (result?.error) {
-    console.error(result.error);
+    logger.error(result.error);
     toast.error("Login failed. Please check your credentials.");
   } else {
     // ✅ Tell React Query that auth has changed

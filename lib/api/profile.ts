@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Profile, UpdateProfileInput } from "@/lib/types/database";
+import { logger } from "../logger";
 
 /**
  * Upload avatar to Supabase Storage
@@ -22,7 +23,7 @@ export async function uploadAvatar(
     .upload(filePath, file);
 
   if (uploadError) {
-    console.error("Error uploading avatar:", uploadError);
+    logger.error("Error uploading avatar:", uploadError);
     throw uploadError;
   }
 
@@ -81,7 +82,7 @@ export async function updateProfileFields(
     .single();
 
   if (error) {
-    console.error("Error updating profile:", error);
+    logger.error("Error updating profile:", error);
     throw error;
   }
 
@@ -99,7 +100,7 @@ export async function changePassword(newPassword: string): Promise<void> {
   });
 
   if (error) {
-    console.error("Error changing password:", error);
+    logger.error("Error changing password:", error);
     throw error;
   }
 }
@@ -115,7 +116,7 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
   });
 
   if (error) {
-    console.error("Error sending reset email:", error);
+    logger.error("Error sending reset email:", error);
     throw error;
   }
 }

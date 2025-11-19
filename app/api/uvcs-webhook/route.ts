@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
@@ -6,7 +7,7 @@ export async function POST(req: Request) {
   const token = url.searchParams.get('token');
 
   if (!process.env.UVCS_WEBHOOK_TOKEN) {
-    console.warn('UVCS_WEBHOOK_TOKEN not set');
+    logger.warn('UVCS_WEBHOOK_TOKEN not set');
   }
 
   // Simple shared-secret check
@@ -63,13 +64,13 @@ export async function POST(req: Request) {
       });
 
     if (error) {
-      console.error('UVCS webhook insert error', error);
+      logger.error('UVCS webhook insert error', error);
       return new Response('DB error', { status: 500 });
     }
 
     return new Response('ok', { status: 200 });
   } catch (err) {
-    console.error('UVCS webhook unhandled error', err);
+    logger.error('UVCS webhook unhandled error', err);
     return new Response('Server error', { status: 500 });
   }
 }
