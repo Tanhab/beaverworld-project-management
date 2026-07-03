@@ -42,7 +42,9 @@ next-env.d.ts
 
 supabase/.temp
 
-zip-project.ps1
-beaverworlddev.zip
 # Sentry Config File
 .env.sentry-build-plugin
+
+
+.claude
+misc/

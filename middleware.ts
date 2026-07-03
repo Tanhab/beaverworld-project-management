@@ -14,13 +14,31 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { updateSession } from './lib/supabase/middleware';
 
+/**
+ * Kill switch: when ARGUS_DEMO_DOWN is truthy, serve 503 to the monitored
+ * app surface so uptime checkers (Argus) see real downtime. Excludes
+ * /api so backend/webhook routes keep working while this is flipped on.
+ */
+function isDemoDown(): boolean {
+  const value = (process.env.ARGUS_DEMO_DOWN ?? '').trim().toLowerCase();
+  return value === 'true' || value === '1' || value === 'yes';
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (isDemoDown() && !pathname.startsWith('/api')) {
+    return new NextResponse('down', {
+      status: 503,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
    if (pathname.startsWith('/api/uvcs-webhook')) {
     // Do NOT redirect, just let the request hit the route handler
     return NextResponse.next();
   }
-  
+
   return await updateSession(request);
 }
 
