@@ -1,6 +1,7 @@
 // lib/integrations/discord.ts
 import type { Database } from '@/lib/types/database.types';
 import { markDiscordSent } from '@/lib/api/notifications';
+import { postToDiscord } from '@/lib/actions/discord';
 import { logger } from '../logger';
 
 type NotificationType = Database['public']['Enums']['notification_type'];
@@ -88,54 +89,34 @@ class DiscordRateLimiter {
 const rateLimiter = new DiscordRateLimiter();
 
 /**
- * Send a notification to Discord via webhook
+ * Send a notification to Discord via webhook.
+ *
+ * The webhook URL is a secret, so the actual POST happens in a server action
+ * (`postToDiscord`). This function only filters recipients, formats the message,
+ * and applies client-side rate limiting — keeping the URL out of the browser
+ * bundle.
  */
 export async function sendDiscordNotification(
   payload: DiscordNotificationPayload
 ): Promise<void> {
-  const webhookUrl = process.env.NEXT_PUBLIC_DISCORD_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    logger.warn('Discord webhook URL not configured. Skipping Discord notification.');
-    return;
-  }
-
   // Filter users who have Discord IDs
   const usersWithDiscord = payload.users.filter(u => u.discord_id);
 
   if (usersWithDiscord.length === 0) {
     logger.info('No users with Discord IDs. Skipping Discord notification.');
-    await markDiscordSent(payload.notificationId);
+    if (payload.notificationId) await markDiscordSent(payload.notificationId);
     return;
   }
 
   // Format the Discord message
   const discordMessage = formatDiscordMessage(payload, usersWithDiscord);
 
-  // Send via rate limiter
+  // Send via rate limiter; the POST itself runs server-side.
   await rateLimiter.add(async () => {
-    try {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: discordMessage,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Discord webhook failed: ${response.status} - ${errorText}`);
-      }
-
-      // Mark as sent in database
-      await markDiscordSent(payload.notificationId);
+    const result = await postToDiscord(discordMessage);
+    if (result.ok) {
+      if (payload.notificationId) await markDiscordSent(payload.notificationId);
       logger.info(`Discord notification sent for: ${payload.title}`);
-    } catch (error) {
-      logger.error('Error sending Discord notification:', error);
-      throw error;
     }
   });
 }
