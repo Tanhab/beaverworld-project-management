@@ -37,20 +37,6 @@ function formatTime(iso: string): string {
   });
 }
 
-function initialsFromName(name: string | null): string {
-  if (!name) return '??';
-  if (name.includes('@')) {
-    const username = name.split('@')[0];
-    return username.slice(0, 2).toUpperCase();
-  }
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .map((p) => p[0]!.toUpperCase())
-    .join('')
-    .slice(0, 2);
-}
-
 function extractBranchFromPath(path: string | null): string | null {
   if (!path) return null;
   const match = path.match(/br:([^@]+)/) || path.match(/^(.+)$/);
@@ -196,11 +182,11 @@ export default function VersionTrackerCard() {
                       <div className="flex items-center gap-2 min-w-0">
                         <Avatar className="h-6 w-6 border border-[hsl(var(--border))] shrink-0">
                           <AvatarFallback className="bg-[hsl(var(--secondary))] text-[hsl(var(--secondary-foreground))] font-semibold text-[10px]">
-                            {initialsFromName(version.author)}
+                            {version.author_initials ?? '??'}
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-xs text-[hsl(var(--muted-foreground))] truncate">
-                          {version.author ?? 'Unknown'}
+                          {version.author_name ?? ''}
                         </span>
                       </div>
 

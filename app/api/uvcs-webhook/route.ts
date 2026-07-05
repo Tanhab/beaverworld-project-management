@@ -11,7 +11,7 @@ export async function POST(req: Request) {
   }
 
   if (process.env.UVCS_WEBHOOK_TOKEN && token !== process.env.UVCS_WEBHOOK_TOKEN) {
-    logger.warn('UVCS webhook: bad token', { token });
+    logger.warn('UVCS webhook: rejected request with invalid token');
     return new Response('Unauthorized', { status: 401 });
   }
 
