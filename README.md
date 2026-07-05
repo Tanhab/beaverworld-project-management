@@ -2,6 +2,7 @@
 
 **An internal issue tracker & Kanban tool for a student game-dev team — integrated with Plastic SCM, Discord, and email.**
 
+[![CI](https://github.com/Tanhab/beaverworld-project-management/actions/workflows/ci.yml/badge.svg)](https://github.com/Tanhab/beaverworld-project-management/actions/workflows/ci.yml)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
