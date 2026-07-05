@@ -235,7 +235,7 @@ export async function processPendingDiscordNotifications(): Promise<void> {
 
   for (const notification of pending) {
     try {
-      const profile = notification.profile as any;
+      const profile = notification.profile;
       if (!profile?.discord_id) {
         // User doesn't have Discord ID, mark as sent anyway
         await markDiscordSent(notification.id);

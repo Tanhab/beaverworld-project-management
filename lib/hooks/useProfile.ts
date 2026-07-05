@@ -7,6 +7,7 @@ import {
   sendPasswordResetEmail,
 } from "../api/profile";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/lib/utils/errors";
 
 export function useUploadAvatar() {
   const queryClient = useQueryClient();
@@ -21,7 +22,7 @@ export function useUploadAvatar() {
       toast.success("Profile picture updated successfully");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to upload avatar: ${error.message}`);
+      toast.error(getErrorMessage(error, "Failed to upload avatar"));
     },
   });
 }
@@ -38,7 +39,7 @@ export function useDeleteAvatar() {
       toast.success("Profile picture removed");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to remove avatar: ${error.message}`);
+      toast.error(getErrorMessage(error, "Failed to remove avatar"));
     },
   });
 }
@@ -61,7 +62,7 @@ export function useUpdateProfileFields() {
       toast.success("Profile updated successfully");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to update profile: ${error.message}`);
+      toast.error(getErrorMessage(error, "Failed to update profile"));
     },
   });
 }
@@ -73,7 +74,7 @@ export function useChangePassword() {
       toast.success("Password changed successfully");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to change password: ${error.message}`);
+      toast.error(getErrorMessage(error, "Failed to change password"));
     },
   });
 }
@@ -85,7 +86,7 @@ export function useSendPasswordReset() {
       toast.success("Password reset email sent! Check your inbox.");
     },
     onError: (error: Error) => {
-      toast.error(`Failed to send reset email: ${error.message}`);
+      toast.error(getErrorMessage(error, "Failed to send reset email"));
     },
   });
 }

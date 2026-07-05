@@ -6,6 +6,7 @@ import type {
   CreateIssueInput,
   UpdateIssueInput,
   IssueActivity,
+  IssueActivityWithUser,
   Database,
   Profile,
 } from '@/lib/types/database';
@@ -242,7 +243,7 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
     .order('created_at', { ascending: false });
   
   if (activities && activities.length > 0) {
-    const userIds = [...new Set(activities.map((a: any) => a.user_id))];
+    const userIds = [...new Set(activities.map((a) => a.user_id))];
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, username, initials, avatar_url')
@@ -250,7 +251,7 @@ export async function getIssueById(issueId: string): Promise<IssueWithRelations 
     
     const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
     activities.forEach(activity => {
-      (activity as any).user_profile = profileMap.get(activity.user_id);
+      (activity as IssueActivityWithUser).user_profile = profileMap.get(activity.user_id);
     });
   }
   
@@ -747,7 +748,7 @@ export async function addIssueActivity(
     .insert({
       issue_id: issueId,
       user_id: user.id,
-      activity_type: activityType as any,
+      activity_type: activityType as Database['public']['Enums']['activity_type'],
       content,
     })
     .select()
@@ -775,7 +776,7 @@ export async function addIssueActivity(
             typeof content === 'object' &&
             content !== null &&
             'text' in content
-              ? String((content as any).text)
+              ? String((content as { text?: unknown }).text)
               : '';
           const preview =
             commentText.substring(0, 100) +
