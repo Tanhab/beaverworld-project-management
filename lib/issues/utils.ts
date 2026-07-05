@@ -148,14 +148,14 @@ export const getPriorityColor = (priority: string) => {
         // If filters are active, just sort by priority
         if (hasActiveFilters) {
           return issuesCopy.sort((a, b) => 
-            (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99)
+            (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99)
           );
         }
         // Default: Status-aware sorting, then by priority
         return issuesCopy.sort((a, b) => {
           const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
           if (statusDiff !== 0) return statusDiff;
-          return (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+          return (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99);
         });
 
       case "priority-low":
@@ -163,14 +163,14 @@ export const getPriorityColor = (priority: string) => {
         // If filters are active, just sort by priority
         if (hasActiveFilters) {
           return issuesCopy.sort((a, b) => 
-            (reversePriorityOrder[a.priority] || 99) - (reversePriorityOrder[b.priority] || 99)
+            (reversePriorityOrder[a.priority] ?? 99) - (reversePriorityOrder[b.priority] ?? 99)
           );
         }
         // Default: Status-aware sorting, then by priority
         return issuesCopy.sort((a, b) => {
           const statusDiff = getStatusOrder(a.status) - getStatusOrder(b.status);
           if (statusDiff !== 0) return statusDiff;
-          return (reversePriorityOrder[a.priority] || 99) - (reversePriorityOrder[b.priority] || 99);
+          return (reversePriorityOrder[a.priority] ?? 99) - (reversePriorityOrder[b.priority] ?? 99);
         });
 
       default:
