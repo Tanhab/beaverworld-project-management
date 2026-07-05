@@ -20,10 +20,78 @@ import {
 } from "@/lib/actions/email-notifications";
 import { logger } from '../logger';
 
+type AssigneeProfile = Pick<Profile, 'id' | 'username' | 'initials' | 'avatar_url'>;
 
 /**
- * Get all issues with optional filtering
- * OPTIMIZED: Single query with joins instead of N+1 queries
+ * Batch-load assignee profiles for a set of issues.
+ *
+ * `issue_assignees.user_id` references auth.users, not `profiles`, so PostgREST
+ * can't embed the profile directly. We resolve profiles in a single `in(...)`
+ * query and map them back by id — two queries total for any number of issues,
+ * instead of the previous one-query-per-issue N+1.
+ */
+async function getAssigneesByIssue(
+  supabase: ReturnType<typeof createClient>,
+  issueIds: string[],
+): Promise<Map<string, AssigneeProfile[]>> {
+  const byIssue = new Map<string, AssigneeProfile[]>();
+  if (issueIds.length === 0) return byIssue;
+
+  const { data: links, error: linksError } = await supabase
+    .from('issue_assignees')
+    .select('issue_id, user_id')
+    .in('issue_id', issueIds);
+
+  if (linksError) {
+    logger.error('Error fetching issue assignees:', linksError);
+    return byIssue;
+  }
+  if (!links || links.length === 0) return byIssue;
+
+  const userIds = [...new Set(links.map((link) => link.user_id))];
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, username, initials, avatar_url')
+    .in('id', userIds);
+
+  if (profilesError) {
+    logger.error('Error fetching assignee profiles:', profilesError);
+    return byIssue;
+  }
+
+  const profileById = new Map<string, AssigneeProfile>(
+    (profiles ?? []).map((profile) => [profile.id, profile]),
+  );
+
+  for (const link of links) {
+    const profile = profileById.get(link.user_id);
+    if (!profile) continue;
+    const list = byIssue.get(link.issue_id) ?? [];
+    list.push(profile);
+    byIssue.set(link.issue_id, list);
+  }
+
+  return byIssue;
+}
+
+/**
+ * Strip characters that are meaningful inside a PostgREST `or(...)` filter
+ * string (comma separates conditions, parentheses group, % and * are
+ * wildcards) so user input can't inject extra filter conditions. Also caps
+ * the length.
+ */
+function sanitizeSearchTerm(term: string): string {
+  return term
+    .replace(/[,()%*\\"]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 100);
+}
+
+/**
+ * Get all issues with optional filtering.
+ * Assignees are attached with two batched queries (see getAssigneesByIssue),
+ * not one query per issue.
  */
 export async function getAllIssues(filters?: {
   status?: Database["public"]["Enums"]["issue_status"][];
@@ -70,17 +138,23 @@ export async function getAllIssues(filters?: {
   }
   
   if (filters?.search) {
-  const searchTerm = filters.search;
-  const isNumeric = /^\d+$/.test(searchTerm);
-  
-  if (isNumeric) {
-    // If search is numeric, search title, description, and issue_number
-    query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,issue_number.eq.${searchTerm}`);
-  } else {
-    // If search is text, only search title and description
-    query = query.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    const searchTerm = filters.search.trim();
+    const isNumeric = /^\d+$/.test(searchTerm);
+
+    if (isNumeric) {
+      // Numeric: match issue_number exactly plus title/description text.
+      // searchTerm is digits-only here, so it is safe to interpolate.
+      query = query.or(
+        `title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,issue_number.eq.${searchTerm}`,
+      );
+    } else {
+      // Text: sanitize first to prevent PostgREST filter-string injection.
+      const safe = sanitizeSearchTerm(searchTerm);
+      if (safe) {
+        query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
+      }
+    }
   }
-}
   
   if (filters?.dateFrom) {
     query = query.gte('updated_at', filters.dateFrom.toISOString());
@@ -97,42 +171,23 @@ export async function getAllIssues(filters?: {
   }
   
   const { data: issues, error } = await query;
-  
+
   if (error) {
     logger.error('Error fetching issues:', error);
     throw error;
   }
-  if (!issues) return [];
+  if (!issues || issues.length === 0) return [];
 
-  // Fetch assignees separately (can't join many-to-many efficiently)
-  const issuesWithAssignees = await Promise.all(
-    issues.map(async (issue) => {
-      // Fetch assignees with profiles separately
-      const { data: assigneeData } = await supabase
-        .from('issue_assignees')
-        .select('user_id')
-        .eq('issue_id', issue.id);
-      
-      if (!assigneeData || assigneeData.length === 0) {
-        return { ...issue, assignees: [] };
-      }
-      
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, username, initials, avatar_url')
-        .in('id', assigneeData.map((a: any) => a.user_id));
-
-      const assignees: any[] = assigneeData?.map((a: any) => a.profiles).filter(Boolean) || [];
-
-      return {
-        ...issue,
-        assignees,
-        activities: [], // Don't fetch activities for list view (performance)
-      };
-    })
+  const assigneesByIssue = await getAssigneesByIssue(
+    supabase,
+    issues.map((issue) => issue.id),
   );
-  
-  return issuesWithAssignees as unknown as IssueWithRelations[];
+
+  return issues.map((issue) => ({
+    ...issue,
+    assignees: assigneesByIssue.get(issue.id) ?? [],
+    activities: [], // Not loaded for list views
+  })) as unknown as IssueWithRelations[];
 }
 
 /**
@@ -706,7 +761,6 @@ export async function addIssueActivity(
     .eq('id', issueId);
   
   // Notify on comments
-    // Notify on comments
   if (activityType === 'comment') {
     try {
       const issue = await getIssueById(issueId);
@@ -784,8 +838,7 @@ export async function addIssueActivity(
 }
 
 /**
- * Get issues assigned to current user
- * OPTIMIZED: Single query with joins
+ * Get issues assigned to the current user.
  */
 export async function getMyIssues(): Promise<IssueWithRelations[]> {
   const supabase = createClient();
@@ -819,29 +872,16 @@ export async function getMyIssues(): Promise<IssueWithRelations[]> {
     .order('updated_at', { ascending: false });
   
   if (error) throw error;
-  if (!issues) return [];
+  if (!issues || issues.length === 0) return [];
 
-  // Fetch assignees for each issue
-  const issuesWithAssignees = await Promise.all(
-    issues.map(async (issue) => {
-      const { data: assigneeData } = await supabase
-        .from('issue_assignees')
-        .select(`
-          profiles!issue_assignees_user_id_fkey(
-            id, username, initials, avatar_url
-          )
-        `)
-        .eq('issue_id', issue.id);
-
-      const assignees: any[] = assigneeData?.map((a: any) => a.profiles).filter(Boolean) || [];
-
-      return {
-        ...issue,
-        assignees,
-        activities: [],
-      };
-    })
+  const assigneesByIssue = await getAssigneesByIssue(
+    supabase,
+    issues.map((issue) => issue.id),
   );
-  
-  return issuesWithAssignees as unknown as IssueWithRelations[];
+
+  return issues.map((issue) => ({
+    ...issue,
+    assignees: assigneesByIssue.get(issue.id) ?? [],
+    activities: [],
+  })) as unknown as IssueWithRelations[];
 }
