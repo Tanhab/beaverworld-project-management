@@ -34,7 +34,7 @@ export async function uploadAvatar(
 
   // Update profile with new avatar URL using the updateProfileFields function
   // This will use the proper RLS context
-  await updateProfileFields(userId, { avatar_url: publicUrl } as any);
+  await updateProfileFields(userId, { avatar_url: publicUrl });
 
   return { avatar_url: publicUrl };
 }
@@ -59,7 +59,7 @@ export async function deleteAvatar(userId: string): Promise<void> {
   }
 
   // Update profile to remove avatar URL
-  await updateProfileFields(userId, { avatar_url: null } as any);
+  await updateProfileFields(userId, { avatar_url: null });
 }
 
 /**
@@ -67,7 +67,7 @@ export async function deleteAvatar(userId: string): Promise<void> {
  */
 export async function updateProfileFields(
   userId: string,
-  updates: { username?: string; initials?: string; avatar_url?: string }
+  updates: { username?: string; initials?: string; avatar_url?: string | null }
 ): Promise<Profile> {
   const supabase = createClient();
 

@@ -22,6 +22,7 @@ import type {
   TaskFilters,
 } from '@/lib/types/database';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils/errors';
 
 // ============================================
 // TASKS
@@ -61,8 +62,8 @@ export function useCreateTask(userId: string, boardId: string) {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task created successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create task');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create task'));
     },
   });
 }
@@ -78,8 +79,8 @@ export function useUpdateTask(userId: string, boardId: string) {
       queryClient.invalidateQueries({ queryKey: ['tasks', variables.taskId] });
       toast.success('Task updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update task');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update task'));
     },
   });
 }
@@ -156,8 +157,8 @@ export function useDeleteTask(boardId: string) {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Task deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete task');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete task'));
     },
   });
 }
@@ -227,8 +228,8 @@ export function useCreateComment(userId: string, taskId: string) {
       queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
       toast.success('Comment added');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to add comment');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to add comment'));
     },
   });
 }
@@ -243,8 +244,8 @@ export function useUpdateComment(taskId: string) {
       queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
       toast.success('Comment updated');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update comment');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update comment'));
     },
   });
 }
@@ -258,8 +259,8 @@ export function useDeleteComment(taskId: string) {
       queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
       toast.success('Comment deleted');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete comment');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete comment'));
     },
   });
 }

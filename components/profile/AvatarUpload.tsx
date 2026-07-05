@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getErrorMessage } from "@/lib/utils/errors";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import imageCompression from "browser-image-compression";
@@ -97,8 +98,8 @@ export default function AvatarUpload({
       toast.success(
         `Image compressed from ${(file.size / 1024 / 1024).toFixed(2)}MB to ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`
       );
-    } catch (error: any) {
-      toast.error(error.message || "Failed to compress image");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Failed to compress image"));
     } finally {
       setIsCompressing(false);
     }

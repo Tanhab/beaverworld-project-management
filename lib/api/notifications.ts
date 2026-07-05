@@ -34,6 +34,7 @@ export interface NotificationWithProfile extends Notification {
     username: string;
     initials: string;
     avatar_url: string | null;
+    discord_id?: string | null;
   };
 }
 

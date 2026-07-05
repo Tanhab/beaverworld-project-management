@@ -8,6 +8,7 @@ import {
 } from '../api/users'
 import { CreateUserInput, UpdateProfileInput } from '@/lib/types/database'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/utils/errors'
 
 export function useUsers() {
     return useQuery({
@@ -58,7 +59,7 @@ export function useUpdateProfile() {
             toast.success('Profile updated successfully')
         },
         onError: (error: Error) => {
-            toast.error(`Failed to update profile: ${error.message}`)
+            toast.error(getErrorMessage(error, 'Failed to update profile'))
         },
     })
 }
@@ -77,7 +78,7 @@ export function useCreateUser() {
             )
         },
         onError: (error: Error) => {
-            toast.error(`Failed to create user: ${error.message}`)
+            toast.error(getErrorMessage(error, 'Failed to create user'))
         },
     })
 }

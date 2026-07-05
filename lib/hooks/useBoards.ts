@@ -28,6 +28,7 @@ import type {
   UpdateColumnInput,
 } from '@/lib/types/database';
 import { toast } from 'sonner';
+import { getErrorMessage } from '@/lib/utils/errors';
 
 // ============================================
 // BOARDS
@@ -80,8 +81,8 @@ export function useCreateBoard(userId: string) {
       queryClient.invalidateQueries({ queryKey: ['boards'] });
       toast.success('Board created successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create board');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create board'));
     },
   });
 }
@@ -95,8 +96,8 @@ export function useCreateBoardWithColumns(userId: string) {
       queryClient.invalidateQueries({ queryKey: ['boards'] });
       toast.success('Board created with default columns');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create board');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create board'));
     },
   });
 }
@@ -112,8 +113,8 @@ export function useUpdateBoard() {
       queryClient.invalidateQueries({ queryKey: ['boards', variables.boardId] });
       toast.success('Board updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update board');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update board'));
     },
   });
 }
@@ -127,8 +128,8 @@ export function useDeleteBoard() {
       queryClient.invalidateQueries({ queryKey: ['boards'] });
       toast.success('Board deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete board');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete board'));
     },
   });
 }
@@ -180,8 +181,8 @@ export function useCreateColumn() {
       queryClient.invalidateQueries({ queryKey: ['boards', variables.board_id, 'details'] });
       toast.success('Column created successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to create column');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to create column'));
     },
   });
 }
@@ -196,8 +197,8 @@ export function useUpdateColumn(boardId: string) {
       queryClient.invalidateQueries({ queryKey: ['boards', boardId, 'details'] });
       toast.success('Column updated successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to update column');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to update column'));
     },
   });
 }
@@ -211,8 +212,8 @@ export function useDeleteColumn(boardId: string) {
       queryClient.invalidateQueries({ queryKey: ['boards', boardId, 'details'] });
       toast.success('Column deleted successfully');
     },
-    onError: (error: any) => {
-      toast.error(error.message || 'Failed to delete column');
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'Failed to delete column'));
     },
   });
 }
