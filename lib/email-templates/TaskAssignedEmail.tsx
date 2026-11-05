@@ -1,7 +1,9 @@
+import { APP_URL } from "@/lib/app-url";
+
 export default function TaskAssignedEmail({ task, actor }: any) {
   const taskUrl = task.board_id 
-    ? `https://beaverworld.dev/boards/${task.board_id}?task=${task.id}`
-    : `https://beaverworld.dev/boards`;
+    ? `${APP_URL}/boards/${task.board_id}?task=${task.id}`
+    : `${APP_URL}/boards`;
 
   return (
     <div style={{ fontFamily: "sans-serif", padding: "20px", backgroundColor: "#f9fafb" }}>
