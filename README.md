@@ -1,13 +1,13 @@
 # Beaverworld Project Management
 
-**An internal issue tracker & Kanban tool for a student game-dev team — integrated with Plastic SCM, Discord, and email.**
+**An internal issue tracker & Kanban tool for a 15–20 person Unity development team — integrated with Plastic SCM, Discord, and email.**
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-149eca?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)
 ![Supabase](https://img.shields.io/badge/Supabase-Postgres-3ecf8e?logo=supabase)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss)
-[![Live](https://img.shields.io/badge/Live-beaverworld.dev-brightgreen)](https://www.beaverworld.dev/)
+[![Live](https://img.shields.io/badge/Live-beaverworld--dev.vercel.app-brightgreen)](https://beaverworld-dev.vercel.app/)
 
 <!-- Hero screenshot (light + dark). Add docs/media/hero.png, then uncomment:
 ![Beaverworld dashboard](docs/media/hero.png)
@@ -17,11 +17,10 @@
 
 ## What it is
 
-Beaverworld is a student game-dev project — a mixed team of ~15–20 developers, art students, and a
-supervising teacher. Our tooling was scattered: **Discord** for chat, **Milanote** for storyboarding,
+Beaverworld is a Unity project built by a mixed team of ~15–20 developers and artists. Our tooling was scattered: **Discord** for chat, **Milanote** for storyboarding,
 and **Plastic SCM (UVCS)** for version control — with no project-management tool tying it together. We
-tried **Asana**, which worked well, but its free tier caps at 10 people and premium wasn't justifiable
-for an educational project.
+tried **Asana**, which worked well, but its free tier caps at 10 people and a paid plan wasn't justifiable
+for the team's budget.
 
 The bigger pain was issue tracking. Our artists don't use UVCS, and unlike GitHub it has no web UI for
 filing or managing issues — so whenever someone playtested the game, bugs got dropped into Discord,
@@ -36,7 +35,7 @@ the team day-to-day.
 
 ## 🎬 Demo
 
-🔗 **Live app:** [beaverworld.dev](https://www.beaverworld.dev/) — this is a private internal tool, so
+🔗 **Live app:** [beaverworld-dev.vercel.app](https://beaverworld-dev.vercel.app/) — this is a private internal tool, so
 the link lands on the login page (no public sign-up), but it confirms the app is live and deployed. A
 guided walkthrough or a seeded read-only demo is available on request.
 
