@@ -3,6 +3,7 @@ import type { Database } from '@/lib/types/database.types';
 import { markDiscordSent } from '@/lib/api/notifications';
 import { postToDiscord } from '@/lib/actions/discord';
 import { logger } from '../logger';
+import { APP_URL } from '@/lib/app-url';
 
 type NotificationType = Database['public']['Enums']['notification_type'];
 
@@ -163,7 +164,7 @@ function formatDiscordMessage(
     // Construct full URL if it's a relative path
     const fullLink = payload.link.startsWith('http') 
       ? payload.link 
-      : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${payload.link}`;
+      : `${APP_URL}${payload.link}`;
     message += `🔗 ${fullLink}`;
   }
 

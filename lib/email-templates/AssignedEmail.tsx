@@ -1,7 +1,9 @@
+import { APP_URL } from "@/lib/app-url";
+
 export default function AssignedEmail({ issue, actor }: any) {
   const issueUrl = issue.issue_number 
-    ? `https://beaverworld.dev/issues/${issue.issue_number}`
-    : `https://beaverworld.dev/issues`;
+    ? `${APP_URL}/issues/${issue.issue_number}`
+    : `${APP_URL}/issues`;
 
   return (
     <div style={{ fontFamily: "sans-serif", padding: "20px", backgroundColor: "#f9fafb" }}>
